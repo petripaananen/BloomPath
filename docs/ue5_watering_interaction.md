@@ -31,7 +31,7 @@ Player waters flower → Animation plays → HTTP POST to middleware → Jira is
 
 ---
 
-## Step 2: Modify BP_FlowerActor
+## Step 2: Modify BP_GrowerActor
 
 Your existing flower actors need overlap detection to respond to watering.
 
@@ -175,7 +175,17 @@ For quick testing, simply move the watering can actor near flowers - the overlap
 
 ### Test HTTP Connection First
 
-With middleware running (`python middleware.py`):
+Run the automated test script to verify the middleware is working:
+
+```powershell
+# Start middleware in one terminal
+python middleware.py
+
+# Run test script in another terminal
+.\test_watering.ps1 -IssueKey "KAN-32"
+```
+
+Or test manually with PowerShell:
 
 ```powershell
 $body = '{"issue_key": "KAN-32"}'

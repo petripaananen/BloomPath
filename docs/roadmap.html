@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -99,13 +100,62 @@
             justify-content: center;
             font-weight: 700;
             font-size: 1.2rem;
+            position: relative;
         }
 
-        .phase:nth-child(1) .phase-number { background: linear-gradient(135deg, var(--accent-green), var(--accent-cyan)); }
-        .phase:nth-child(2) .phase-number { background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple)); }
-        .phase:nth-child(3) .phase-number { background: linear-gradient(135deg, var(--accent-orange), var(--accent-pink)); }
-        .phase:nth-child(4) .phase-number { background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink)); }
-        .phase:nth-child(5) .phase-number { background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue)); }
+        .phase:nth-child(1) .phase-number {
+            background: linear-gradient(135deg, var(--accent-green), var(--accent-cyan));
+        }
+
+        .phase:nth-child(2) .phase-number {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+        }
+
+        .phase:nth-child(3) .phase-number {
+            background: linear-gradient(135deg, var(--accent-orange), var(--accent-pink));
+        }
+
+        .phase:nth-child(4) .phase-number {
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
+        }
+
+        .phase:nth-child(5) .phase-number {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+        }
+
+        .phase:nth-child(6) .phase-number {
+            background: linear-gradient(135deg, var(--accent-pink), var(--accent-orange));
+        }
+
+        .phase:nth-child(7) .phase-number {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+        }
+
+        .phase:nth-child(8) .phase-number {
+            background: linear-gradient(135deg, var(--accent-green), var(--accent-blue));
+        }
+
+        .phase.completed {
+            border-color: rgba(16, 185, 129, 0.3);
+            opacity: 0.9;
+        }
+
+        .phase.completed .phase-number::after {
+            content: '✓';
+            position: absolute;
+            font-size: 0.8rem;
+            bottom: -5px;
+            right: -5px;
+            background: var(--accent-green);
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid var(--bg-secondary);
+        }
 
         .phase-title {
             flex: 1;
@@ -195,7 +245,8 @@
             border-collapse: collapse;
         }
 
-        th, td {
+        th,
+        td {
             padding: 1rem;
             text-align: left;
             border-bottom: 1px solid var(--border);
@@ -221,9 +272,20 @@
             font-weight: 500;
         }
 
-        .badge-high { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); }
-        .badge-medium { background: rgba(245, 158, 11, 0.2); color: var(--accent-orange); }
-        .badge-low { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); }
+        .badge-high {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--accent-green);
+        }
+
+        .badge-medium {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--accent-orange);
+        }
+
+        .badge-low {
+            background: rgba(59, 130, 246, 0.2);
+            color: var(--accent-blue);
+        }
 
         .stars {
             color: var(--accent-orange);
@@ -255,12 +317,21 @@
         }
 
         @media (max-width: 768px) {
-            body { padding: 1rem; }
-            h1 { font-size: 1.8rem; }
-            .phase-content { grid-template-columns: 1fr; }
+            body {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .phase-content {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <header>
@@ -269,8 +340,52 @@
         </header>
 
         <div class="roadmap">
+            <!-- Phase 1 -->
+            <div class="phase completed">
+                <div class="phase-header">
+                    <div class="phase-number">1</div>
+                    <div class="phase-title">
+                        <h2>Middleware & Initial Sync</h2>
+                        <span>Base Infrastructure & Jira Connectivity</span>
+                    </div>
+                </div>
+                <div class="phase-content">
+                    <div class="feature">
+                        <h3>Core Logic</h3>
+                        <ul class="tasks">
+                            <li>Configure Jira API access and .env</li>
+                            <li>Implement FastAPI webhook listener</li>
+                            <li>Set up initial state synchronization</li>
+                            <li>Basic Remote Control API connectivity</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 2 -->
+            <div class="phase completed">
+                <div class="phase-header">
+                    <div class="phase-number">2</div>
+                    <div class="phase-title">
+                        <h2>UE5 Visual Foundations</h2>
+                        <span>3D Spawning & Tagging Systems</span>
+                    </div>
+                </div>
+                <div class="phase-content">
+                    <div class="feature">
+                        <h3>Visual Core</h3>
+                        <ul class="tasks">
+                            <li>Create BP_GrowerActor and Grow_Leaves</li>
+                            <li>Implement real 3D mesh spawning</li>
+                            <li>Add ID-based tagging for issue tracking</li>
+                            <li>Implement Shrink_Leaves for rollback</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
             <!-- Phase 3 -->
-            <div class="phase">
+            <div class="phase completed">
                 <div class="phase-header">
                     <div class="phase-number">3</div>
                     <div class="phase-title">
@@ -397,6 +512,79 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Phase 8 -->
+            <div class="phase"
+                style="border: 2px solid var(--accent-green); box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);">
+                <div class="phase-header">
+                    <div class="phase-number">8</div>
+                    <div class="phase-title">
+                        <h2>What-If Scenarios <span class="badge badge-high"
+                                style="margin-left: 10px; background: rgba(16, 185, 129, 0.2); color: var(--accent-green);">THESIS
+                                CORE</span></h2>
+                        <span>AI World Model: Latent Forecaster</span>
+                    </div>
+                </div>
+                <div class="phase-content" style="grid-template-columns: 1fr 1fr;">
+                    <div class="feature">
+                        <h3>Scenario Simulation Roadmap</h3>
+                        <ul class="tasks">
+                            <li
+                                style="border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 8px;">
+                                <strong style="color: var(--accent-orange);">Phase A: Resource
+                                    Stress-Testing</strong><br>
+                                <span style="font-size: 0.85em; color: var(--text-secondary);">"What if we lose 2 Senior
+                                    Devs?"</span><br>
+                                <span style="font-size: 0.85em;">Visual: Narrowing paths, 40% growth drop,
+                                    <strong>glowing red root system</strong>.</span>
+                            </li>
+                            <li
+                                style="border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 8px;">
+                                <strong style="color: var(--accent-pink);">Phase B: Scope Creep Simulation</strong><br>
+                                <span style="font-size: 0.85em; color: var(--text-secondary);">"What if we add 50 new
+                                    Stories?"</span><br>
+                                <span style="font-size: 0.85em;">Visual: Over-encumbered epic trees, <strong>withered
+                                        leaves</strong> (predicted death).</span>
+                            </li>
+                            <li
+                                style="border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 8px;">
+                                <strong style="color: var(--accent-purple);">Phase C: Priority Shifting</strong><br>
+                                <span style="font-size: 0.85em; color: var(--text-secondary);">"What if Epic B becomes
+                                    P0?"</span><br>
+                                <span style="font-size: 0.85em;">Visual: Moving 3D trees, <strong>Pollinator
+                                        fireflies</strong> rerouted.</span>
+                            </li>
+                            <li>
+                                <strong style="color: var(--accent-cyan);">Phase D: Environmental Risks</strong><br>
+                                <span style="font-size: 0.85em; color: var(--text-secondary);">"What if external API
+                                    fails?"</span><br>
+                                <span style="font-size: 0.85em;">Visual: <strong>Localized storm</strong> over
+                                    integration zone, ripple effects.</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="feature">
+                        <h3>Technical & Thesis Foundations</h3>
+                        <ul class="tasks">
+                            <li
+                                style="border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 8px;">
+                                <strong style="color: var(--accent-green);">The "Sandbox" Mode</strong><br>
+                                <span style="font-size: 0.85em;">• Snapshot State: Local Jira data cache</span><br>
+                                <span style="font-size: 0.85em;">• Prediction Engine: Python-based AI model</span><br>
+                                <span style="font-size: 0.85em;">• Ghost Garden: Semi-transparent holographic
+                                    overlays</span>
+                            </li>
+                            <li>
+                                <strong style="color: var(--accent-blue);">The Thesis Key</strong><br>
+                                <p style="font-size: 0.85em; line-height: 1.4; margin-top: 5px;">
+                                    Proving the World Model as a <strong>Structured Knowledge Base</strong> that
+                                    understands production "physics" (Man-hours = Growth).
+                                </p>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Priority Matrix -->
@@ -412,6 +600,12 @@
                     </tr>
                 </thead>
                 <tbody>
+                    <tr>
+                        <td>What-If Scenarios</td>
+                        <td><span class="badge badge-high">Very High</span></td>
+                        <td><span class="badge badge-high">High</span></td>
+                        <td><span class="stars">⭐⭐⭐⭐⭐</span></td>
+                    </tr>
                     <tr>
                         <td>Weather System</td>
                         <td><span class="badge badge-high">High</span></td>
@@ -463,4 +657,5 @@
         </div>
     </div>
 </body>
+
 </html>
