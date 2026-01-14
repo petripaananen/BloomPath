@@ -37,6 +37,11 @@ UE5_GROW_FUNCTION = os.getenv("UE5_GROW_FUNCTION", "Grow_Leaves")
 UE5_SHRINK_FUNCTION = os.getenv("UE5_SHRINK_FUNCTION", "Shrink_Leaves")
 UE5_THORNS_FUNCTION = os.getenv("UE5_THORNS_FUNCTION", "Add_Thorns")
 UE5_REMOVE_THORNS_FUNCTION = os.getenv("UE5_REMOVE_THORNS_FUNCTION", "Remove_Thorns")
+UE5_WEATHER_FUNCTION = os.getenv("UE5_WEATHER_FUNCTION", "Set_Weather")
+UE5_TIME_FUNCTION = os.getenv("UE5_TIME_FUNCTION", "Set_Time_Of_Day")
+
+# Sprint Health Configuration
+JIRA_BOARD_ID = os.getenv("JIRA_BOARD_ID")
 
 # Retry configuration
 MAX_RETRIES = 3
@@ -183,6 +188,202 @@ def trigger_ue5_remove_thorns(branch_id):
     }
     
     logger.info(f"Triggering UE5 remove thorns: {branch_id}")
+    response = requests.put(UE5_REMOTE_CONTROL_URL, json=payload, timeout=5)
+    response.raise_for_status()
+    return response.json()
+
+
+# ============================================================================
+# Jira Transition (UE5 → Jira)
+# ============================================================================
+@retry_on_failure()
+def transition_issue_to_done(issue_key):
+    """Transition a Jira issue to 'Done' status.
+    
+    This enables bidirectional flow: player waters flower in UE5 → issue moves to Done.
+    Dynamically finds the 'Done' transition ID since it varies by workflow.
+    """
+    if not all([JIRA_DOMAIN, JIRA_EMAIL, JIRA_API_TOKEN]):
+        raise ValueError("Missing Jira configuration")
+    
+    url = f"https://{JIRA_DOMAIN}/rest/api/3/issue/{issue_key}/transitions"
+    auth = HTTPBasicAuth(JIRA_EMAIL, JIRA_API_TOKEN)
+    
+    # Get available transitions
+    response = requests.get(url, auth=auth, timeout=10)
+    response.raise_for_status()
+    transitions = response.json().get('transitions', [])
+    
+    # Find the "Done" transition (case-insensitive)
+    done_transition = None
+    for t in transitions:
+        if t['name'].lower() == 'done':
+            done_transition = t['id']
+            break
+    
+    if not done_transition:
+        available = [t['name'] for t in transitions]
+        raise ValueError(f"No 'Done' transition available for {issue_key}. Available: {available}")
+    
+    # Execute the transition
+    payload = {"transition": {"id": done_transition}}
+    response = requests.post(url, json=payload, auth=auth, timeout=10)
+    response.raise_for_status()
+    
+    logger.info(f"🌊 Successfully transitioned {issue_key} to Done (watered in UE5)")
+    return {"status": "success", "issue": issue_key}
+
+
+# ============================================================================
+# Sprint Health (Environmental Dynamics)
+# ============================================================================
+@retry_on_failure()
+def get_active_sprint():
+    """Get the active sprint from Jira board.
+    
+    Returns:
+        dict with sprint info including id, name, startDate, endDate
+        None if no active sprint
+    """
+    if not JIRA_BOARD_ID:
+        logger.warning("JIRA_BOARD_ID not configured")
+        return None
+    
+    url = f"https://{JIRA_DOMAIN}/rest/agile/1.0/board/{JIRA_BOARD_ID}/sprint"
+    auth = HTTPBasicAuth(JIRA_EMAIL, JIRA_API_TOKEN)
+    
+    response = requests.get(url, params={"state": "active"}, auth=auth, timeout=10)
+    response.raise_for_status()
+    
+    sprints = response.json().get('values', [])
+    if sprints:
+        return sprints[0]  # Return first active sprint
+    return None
+
+
+@retry_on_failure()
+def get_sprint_issues(sprint_id):
+    """Get all issues in a sprint with their status and story points.
+    
+    Returns:
+        list of issues with key, status, and storyPoints
+    """
+    url = f"https://{JIRA_DOMAIN}/rest/agile/1.0/sprint/{sprint_id}/issue"
+    auth = HTTPBasicAuth(JIRA_EMAIL, JIRA_API_TOKEN)
+    
+    response = requests.get(
+        url, 
+        params={"fields": "status,customfield_10016,issuetype"},  # customfield_10016 is often story points
+        auth=auth, 
+        timeout=10
+    )
+    response.raise_for_status()
+    
+    return response.json().get('issues', [])
+
+
+def calculate_sprint_health(issues):
+    """Calculate weather based on sprint issue status.
+    
+    Returns: 'sunny' | 'cloudy' | 'storm'
+    - sunny: >= 70% done or on track
+    - cloudy: 40-70% done, some blockers
+    - storm: < 40% done or many blockers
+    """
+    if not issues:
+        return "sunny"  # No issues = calm
+    
+    total = len(issues)
+    done = 0
+    blocked = 0
+    
+    for issue in issues:
+        status = issue.get('fields', {}).get('status', {}).get('name', '')
+        if status.lower() == 'done':
+            done += 1
+        elif status.lower() in [s.lower() for s in BLOCKER_STATUSES]:
+            blocked += 1
+    
+    done_ratio = done / total
+    blocked_ratio = blocked / total
+    
+    # Storm if many blockers or very behind
+    if blocked_ratio > 0.2 or done_ratio < 0.3:
+        return "storm"
+    # Cloudy if moderate blockers or somewhat behind
+    elif blocked_ratio > 0.1 or done_ratio < 0.6:
+        return "cloudy"
+    # Sunny if on track
+    else:
+        return "sunny"
+
+
+def calculate_sprint_progress(sprint):
+    """Calculate sprint progress as percentage based on dates.
+    
+    Returns: float 0.0 to 1.0 (maps to dawn → sunset in UE5)
+    """
+    from datetime import datetime
+    
+    if not sprint:
+        return 0.5  # Default to midday
+    
+    start_str = sprint.get('startDate')
+    end_str = sprint.get('endDate')
+    
+    if not start_str or not end_str:
+        return 0.5
+    
+    try:
+        # Parse ISO format dates
+        start = datetime.fromisoformat(start_str.replace('Z', '+00:00'))
+        end = datetime.fromisoformat(end_str.replace('Z', '+00:00'))
+        now = datetime.now(start.tzinfo)
+        
+        total_duration = (end - start).total_seconds()
+        elapsed = (now - start).total_seconds()
+        
+        if total_duration <= 0:
+            return 0.5
+        
+        progress = max(0.0, min(1.0, elapsed / total_duration))
+        return progress
+    except Exception as e:
+        logger.warning(f"Error calculating sprint progress: {e}")
+        return 0.5
+
+
+@retry_on_failure()
+def trigger_ue5_weather(weather):
+    """Send weather state to UE5."""
+    payload = {
+        "objectPath": UE5_ACTOR_PATH,
+        "functionName": UE5_WEATHER_FUNCTION,
+        "parameters": {
+            "Weather_State": weather  # "sunny", "cloudy", or "storm"
+        },
+        "generateTransaction": True
+    }
+    
+    logger.info(f"🌤️ Setting UE5 weather: {weather}")
+    response = requests.put(UE5_REMOTE_CONTROL_URL, json=payload, timeout=5)
+    response.raise_for_status()
+    return response.json()
+
+
+@retry_on_failure()
+def trigger_ue5_time(progress):
+    """Send time-of-day to UE5 based on sprint progress."""
+    payload = {
+        "objectPath": UE5_ACTOR_PATH,
+        "functionName": UE5_TIME_FUNCTION,
+        "parameters": {
+            "Time_Progress": progress  # 0.0 (dawn) to 1.0 (dusk)
+        },
+        "generateTransaction": True
+    }
+    
+    logger.info(f"🌅 Setting UE5 time: {progress:.2%}")
     response = requests.put(UE5_REMOTE_CONTROL_URL, json=payload, timeout=5)
     response.raise_for_status()
     return response.json()
@@ -382,6 +583,82 @@ def jira_webhook():
             return jsonify({"status": "ue5_error", "issue": issue_key, "error": str(e)}), 500
 
     return jsonify({"status": "received", "issue": issue_key}), 200
+
+
+@app.route('/complete_task', methods=['POST'])
+def complete_task():
+    """Handle task completion from UE5 (watering a flower).
+    
+    This endpoint enables bidirectional flow:
+    Player waters flower in UE5 → POST here → Jira issue transitions to Done
+    """
+    data = request.json
+    if not data:
+        logger.warning("Received /complete_task with no JSON payload")
+        return jsonify({"status": "error", "message": "No JSON payload"}), 400
+    
+    issue_key = data.get('issue_key')
+    if not issue_key:
+        logger.warning("Received /complete_task without issue_key")
+        return jsonify({"status": "error", "message": "Missing issue_key"}), 400
+    
+    logger.info(f"🌊 Watering received from UE5 for {issue_key}")
+    
+    try:
+        result = transition_issue_to_done(issue_key)
+        return jsonify(result), 200
+    except ValueError as e:
+        logger.error(f"Transition error for {issue_key}: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 400
+    except Exception as e:
+        logger.error(f"Failed to transition {issue_key}: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/sprint_status', methods=['GET'])
+def sprint_status():
+    """Return current sprint health for UE5 environmental dynamics.
+    
+    UE5 polls this endpoint to update weather and time-of-day.
+    """
+    try:
+        sprint = get_active_sprint()
+        
+        if not sprint:
+            return jsonify({
+                "status": "no_sprint",
+                "weather": "sunny",
+                "progress": 0.5,
+                "message": "No active sprint found"
+            }), 200
+        
+        issues = get_sprint_issues(sprint['id'])
+        weather = calculate_sprint_health(issues)
+        progress = calculate_sprint_progress(sprint)
+        
+        # Count stats for logging
+        done = sum(1 for i in issues if i.get('fields', {}).get('status', {}).get('name', '').lower() == 'done')
+        
+        logger.info(f"Sprint '{sprint['name']}': {weather} weather, {progress:.1%} progress ({done}/{len(issues)} done)")
+        
+        return jsonify({
+            "status": "ok",
+            "sprint_name": sprint.get('name'),
+            "sprint_id": sprint.get('id'),
+            "weather": weather,
+            "progress": round(progress, 3),
+            "issues_total": len(issues),
+            "issues_done": done
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting sprint status: {e}")
+        return jsonify({
+            "status": "error",
+            "weather": "cloudy",  # Default to cloudy on error
+            "progress": 0.5,
+            "message": str(e)
+        }), 500
 
 
 # ============================================================================

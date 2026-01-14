@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BloomPath Feature Roadmap</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0f1a;
+            --bg-secondary: #111827;
+            --bg-card: #1f2937;
+            --accent-green: #10b981;
+            --accent-blue: #3b82f6;
+            --accent-purple: #8b5cf6;
+            --accent-orange: #f59e0b;
+            --accent-pink: #ec4899;
+            --accent-cyan: #06b6d4;
+            --text-primary: #f9fafb;
+            --text-secondary: #9ca3af;
+            --border: #374151;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(139, 92, 246, 0.1));
+            border-radius: 1rem;
+            border: 1px solid var(--border);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-green), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .roadmap {
+            display: grid;
+            gap: 2rem;
+        }
+
+        .phase {
+            background: var(--bg-secondary);
+            border-radius: 1rem;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .phase:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .phase-header {
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .phase-number {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+
+        .phase:nth-child(1) .phase-number { background: linear-gradient(135deg, var(--accent-green), var(--accent-cyan)); }
+        .phase:nth-child(2) .phase-number { background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple)); }
+        .phase:nth-child(3) .phase-number { background: linear-gradient(135deg, var(--accent-orange), var(--accent-pink)); }
+        .phase:nth-child(4) .phase-number { background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink)); }
+        .phase:nth-child(5) .phase-number { background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue)); }
+
+        .phase-title {
+            flex: 1;
+        }
+
+        .phase-title h2 {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .phase-title span {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .phase-content {
+            padding: 1.5rem;
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .feature {
+            background: var(--bg-card);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            border: 1px solid var(--border);
+        }
+
+        .feature h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .feature h3::before {
+            content: '🌱';
+        }
+
+        .tasks {
+            list-style: none;
+        }
+
+        .tasks li {
+            padding: 0.5rem 0;
+            padding-left: 1.75rem;
+            position: relative;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            border-bottom: 1px solid rgba(55, 65, 81, 0.5);
+        }
+
+        .tasks li:last-child {
+            border-bottom: none;
+        }
+
+        .tasks li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--border);
+            border-radius: 4px;
+            background: var(--bg-secondary);
+        }
+
+        .priority-matrix {
+            margin-top: 3rem;
+            background: var(--bg-secondary);
+            border-radius: 1rem;
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+        }
+
+        .priority-matrix h2 {
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .badge-high { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); }
+        .badge-medium { background: rgba(245, 158, 11, 0.2); color: var(--accent-orange); }
+        .badge-low { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); }
+
+        .stars {
+            color: var(--accent-orange);
+        }
+
+        .quick-wins {
+            margin-top: 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .quick-win {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(6, 182, 212, 0.1));
+            border: 1px solid var(--accent-green);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+        }
+
+        .quick-win h3 {
+            color: var(--accent-green);
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .quick-win p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 1rem; }
+            h1 { font-size: 1.8rem; }
+            .phase-content { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🌸 BloomPath Feature Roadmap</h1>
+            <p>Digital Twin of Organization — Future Enhancements</p>
+        </header>
+
+        <div class="roadmap">
+            <!-- Phase 3 -->
+            <div class="phase">
+                <div class="phase-header">
+                    <div class="phase-number">3</div>
+                    <div class="phase-title">
+                        <h2>Environmental Dynamics</h2>
+                        <span>Weather & Time-of-Day Systems</span>
+                    </div>
+                </div>
+                <div class="phase-content">
+                    <div class="feature">
+                        <h3>Sprint Weather System</h3>
+                        <ul class="tasks">
+                            <li>Query Jira for sprint burndown data</li>
+                            <li>Calculate "on track" vs "behind" metrics</li>
+                            <li>Implement UE5 weather state machine (Sunny → Cloudy → Storm)</li>
+                            <li>Connect middleware to send weather updates</li>
+                            <li>Add Niagara particle effects (rain, sun rays)</li>
+                        </ul>
+                    </div>
+                    <div class="feature">
+                        <h3>Time-of-Day Mapping</h3>
+                        <ul class="tasks">
+                            <li>Map sprint progress (0-100%) to time of day</li>
+                            <li>Dawn = Sprint start, Sunset = Sprint end</li>
+                            <li>Dynamic lighting in UE5</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 4 -->
+            <div class="phase">
+                <div class="phase-header">
+                    <div class="phase-number">4</div>
+                    <div class="phase-title">
+                        <h2>Social Layer</h2>
+                        <span>Team Member Visualization</span>
+                    </div>
+                </div>
+                <div class="phase-content">
+                    <div class="feature">
+                        <h3>Team Member Avatars</h3>
+                        <ul class="tasks">
+                            <li>Query Jira for issue assignees</li>
+                            <li>Create gardener NPC Blueprint</li>
+                            <li>Spawn avatar near assigned flower</li>
+                            <li>"Planting" animation when task completes</li>
+                            <li>Avatar cleanup when reassigned</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 5 -->
+            <div class="phase">
+                <div class="phase-header">
+                    <div class="phase-number">5</div>
+                    <div class="phase-title">
+                        <h2>Audio Feedback</h2>
+                        <span>Immersive Soundscape</span>
+                    </div>
+                </div>
+                <div class="phase-content">
+                    <div class="feature">
+                        <h3>Ambient Soundscape</h3>
+                        <ul class="tasks">
+                            <li>Growth sound effects (chimes, nature sounds)</li>
+                            <li>Birdsong intensity tied to Done issue count</li>
+                            <li>Ominous tones for blockers</li>
+                            <li>Audio manager Blueprint</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 6 -->
+            <div class="phase">
+                <div class="phase-header">
+                    <div class="phase-number">6</div>
+                    <div class="phase-title">
+                        <h2>Historical Visualization</h2>
+                        <span>Garden Time Machine</span>
+                    </div>
+                </div>
+                <div class="phase-content">
+                    <div class="feature">
+                        <h3>Garden Time Machine</h3>
+                        <ul class="tasks">
+                            <li>Store garden state snapshots in database</li>
+                            <li>Time slider UI widget</li>
+                            <li>Playback animation of growth over time</li>
+                            <li>Export to video for presentations</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 7 -->
+            <div class="phase">
+                <div class="phase-header">
+                    <div class="phase-number">7</div>
+                    <div class="phase-title">
+                        <h2>Scale & Multi-Project</h2>
+                        <span>Organization-wide Gardens</span>
+                    </div>
+                </div>
+                <div class="phase-content">
+                    <div class="feature">
+                        <h3>Multi-Project Gardens</h3>
+                        <ul class="tasks">
+                            <li>Query multiple Jira projects</li>
+                            <li>Separate garden zones per project</li>
+                            <li>Connecting paths between related projects</li>
+                            <li>Organization-wide health dashboard</li>
+                        </ul>
+                    </div>
+                    <div class="feature">
+                        <h3>Sprint Timeline Path</h3>
+                        <ul class="tasks">
+                            <li>Physical path through garden</li>
+                            <li>Each sprint = section of path</li>
+                            <li>Completed sprints fully grown</li>
+                            <li>Current sprint actively growing</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Priority Matrix -->
+        <div class="priority-matrix">
+            <h2>📊 Priority Matrix</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th>Impact</th>
+                        <th>Effort</th>
+                        <th>Thesis Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Weather System</td>
+                        <td><span class="badge badge-high">High</span></td>
+                        <td><span class="badge badge-medium">Medium</span></td>
+                        <td><span class="stars">⭐⭐⭐</span></td>
+                    </tr>
+                    <tr>
+                        <td>Audio Feedback</td>
+                        <td><span class="badge badge-medium">Medium</span></td>
+                        <td><span class="badge badge-low">Low</span></td>
+                        <td><span class="stars">⭐⭐</span></td>
+                    </tr>
+                    <tr>
+                        <td>Team Avatars</td>
+                        <td><span class="badge badge-high">High</span></td>
+                        <td><span class="badge badge-high">High</span></td>
+                        <td><span class="stars">⭐⭐⭐</span></td>
+                    </tr>
+                    <tr>
+                        <td>Time Machine</td>
+                        <td><span class="badge badge-high">High</span></td>
+                        <td><span class="badge badge-high">High</span></td>
+                        <td><span class="stars">⭐⭐⭐</span></td>
+                    </tr>
+                    <tr>
+                        <td>Multi-Project</td>
+                        <td><span class="badge badge-medium">Medium</span></td>
+                        <td><span class="badge badge-high">High</span></td>
+                        <td><span class="stars">⭐⭐</span></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3 style="margin-top: 2rem; margin-bottom: 1rem; color: var(--accent-green);">⚡ Quick Wins</h3>
+            <div class="quick-wins">
+                <div class="quick-win">
+                    <h3>🔊 Audio Feedback</h3>
+                    <p>Adds immersion with minimal code changes</p>
+                </div>
+                <div class="quick-win">
+                    <h3>🌅 Time-of-Day</h3>
+                    <p>UE5 has built-in lighting support</p>
+                </div>
+                <div class="quick-win">
+                    <h3>🌧️ Weather Particles</h3>
+                    <p>Niagara templates available in marketplace</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
