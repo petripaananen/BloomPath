@@ -85,6 +85,29 @@ PRIORITY_COLORS = {
 # Issue key validation pattern (e.g., KAN-123, PROJ-1)
 ISSUE_KEY_PATTERN = re.compile(r'^[A-Z][A-Z0-9]+-\d+$')
 
+# ============================================================================
+# Audio Event Queue (Phase 5)
+# ============================================================================
+# Thread-safe event queue for UE5 audio feedback
+audio_event_queue: list[dict[str, Any]] = []
+
+def push_audio_event(event_type: str, issue_key: Optional[str] = None, 
+                     user: Optional[str] = None, extra: Optional[dict] = None) -> None:
+    """Push an audio event to the queue for UE5 to consume."""
+    event = {
+        "type": event_type,
+        "timestamp": datetime.now().isoformat(),
+    }
+    if issue_key:
+        event["issue_key"] = issue_key
+    if user:
+        event["user"] = user
+    if extra:
+        event.update(extra)
+    
+    audio_event_queue.append(event)
+    logger.info(f"🔔 Audio event queued: {event_type} (queue size: {len(audio_event_queue)})")
+
 
 # ============================================================================
 # Jira Authentication Helper
@@ -530,6 +553,105 @@ def was_unblocked(data: dict[str, Any]) -> bool:
 
 
 # ============================================================================
+# Team Members (Phase 4: Social Layer)
+# ============================================================================
+@retry_on_failure()
+def get_team_members() -> list[dict[str, Any]]:
+    """Get team members from Jira project with their assigned tasks.
+    
+    Returns list of team members with:
+    - account_id, display_name, avatar_url
+    - active_tasks (list of issue keys)
+    - completed_today (count)
+    - position (x, y, z for UE5 avatar spawning)
+    """
+    if not all([JIRA_DOMAIN, JIRA_EMAIL, JIRA_API_TOKEN, JIRA_PROJECT_KEY]):
+        logger.warning("Missing Jira configuration for team members")
+        return []
+    
+    auth = get_jira_auth()
+    
+    # Get all active issues with assignees
+    jql = f"project = '{JIRA_PROJECT_KEY}' AND assignee IS NOT EMPTY AND status != Done"
+    url = f"https://{JIRA_DOMAIN}/rest/api/3/search"
+    
+    response = requests.get(
+        url,
+        params={"jql": jql, "maxResults": 100, "fields": "assignee,status,key"},
+        auth=auth,
+        timeout=30
+    )
+    response.raise_for_status()
+    issues = response.json().get("issues", [])
+    
+    # Also get issues completed today
+    today = datetime.now().strftime("%Y-%m-%d")
+    jql_done = f"project = '{JIRA_PROJECT_KEY}' AND status = Done AND statusCategoryChangedDate >= '{today}'"
+    
+    response_done = requests.get(
+        url,
+        params={"jql": jql_done, "maxResults": 100, "fields": "assignee,key"},
+        auth=auth,
+        timeout=30
+    )
+    response_done.raise_for_status()
+    done_issues = response_done.json().get("issues", [])
+    
+    # Group by assignee
+    members_dict: dict[str, dict[str, Any]] = {}
+    
+    for issue in issues:
+        assignee = issue.get("fields", {}).get("assignee")
+        if not assignee:
+            continue
+        
+        account_id = assignee.get("accountId")
+        if account_id not in members_dict:
+            members_dict[account_id] = {
+                "account_id": account_id,
+                "display_name": assignee.get("displayName", "Unknown"),
+                "avatar_url": assignee.get("avatarUrls", {}).get("48x48", ""),
+                "active_tasks": [],
+                "completed_today": 0
+            }
+        
+        members_dict[account_id]["active_tasks"].append(issue.get("key"))
+    
+    # Count completed today
+    for issue in done_issues:
+        assignee = issue.get("fields", {}).get("assignee")
+        if not assignee:
+            continue
+        
+        account_id = assignee.get("accountId")
+        if account_id in members_dict:
+            members_dict[account_id]["completed_today"] += 1
+        else:
+            # Member only has completed tasks
+            members_dict[account_id] = {
+                "account_id": account_id,
+                "display_name": assignee.get("displayName", "Unknown"),
+                "avatar_url": assignee.get("avatarUrls", {}).get("48x48", ""),
+                "active_tasks": [],
+                "completed_today": 1
+            }
+    
+    # Calculate positions (spread members in a circle around origin)
+    members = list(members_dict.values())
+    for i, member in enumerate(members):
+        angle = (2 * 3.14159 * i) / max(len(members), 1)
+        radius = 500  # 500 units from center
+        member["position"] = {
+            "x": round(radius * (1 if i % 2 == 0 else -1) * ((i + 1) / 2) * 200, 1),
+            "y": round(radius * (0.5 if i % 3 == 0 else 0), 1),
+            "z": 0
+        }
+    
+    logger.info(f"👥 Found {len(members)} team members with active tasks")
+    return members
+
+
+# ============================================================================
 # Flask Routes
 # ============================================================================
 @app.route('/health', methods=['GET'])
@@ -571,6 +693,7 @@ def jira_webhook():
     # Check if issue was blocked (add thorns)
     if was_blocked(data):
         logger.info(f"Issue {issue_key} was blocked, triggering thorns")
+        push_audio_event("blocker_added", issue_key=issue_key)
         try:
             trigger_ue5_thorns(issue_key, epic_key)
             return jsonify({"status": "thorns_triggered", "issue": issue_key}), 200
@@ -581,6 +704,7 @@ def jira_webhook():
     # Check if issue was unblocked (remove thorns)
     if was_unblocked(data):
         logger.info(f"Issue {issue_key} was unblocked, removing thorns")
+        push_audio_event("blocker_resolved", issue_key=issue_key)
         try:
             trigger_ue5_remove_thorns(issue_key)
         except Exception as e:
@@ -590,6 +714,7 @@ def jira_webhook():
     # Check if issue was reopened (status changed FROM Done)
     if was_reopened(data):
         logger.info(f"Issue {issue_key} was reopened, triggering shrink")
+        push_audio_event("task_reopened", issue_key=issue_key)
         try:
             trigger_ue5_shrink(issue_key)
             return jsonify({"status": "shrink_triggered", "issue": issue_key}), 200
@@ -599,7 +724,12 @@ def jira_webhook():
 
     # Trigger growth when status changes to 'Done'
     if status == "Done":
+        # Get assignee name for audio event
+        assignee = fields.get('assignee', {})
+        assignee_name = assignee.get('displayName', 'Someone') if assignee else 'Someone'
+        
         logger.info(f"Issue {issue_key} completed (type={growth_type}, modifier={growth_modifier}, epic={epic_key})")
+        push_audio_event("task_completed", issue_key=issue_key, user=assignee_name)
         
         try:
             result = trigger_ue5_growth(issue_key, growth_type, growth_modifier, color, epic_key)
@@ -691,6 +821,50 @@ def sprint_status():
             "progress": 0.5,
             "message": str(e)
         }), 500
+
+
+@app.route('/team_members', methods=['GET'])
+def team_members() -> tuple[Response, int]:
+    """Return team members with their assigned tasks for avatar spawning.
+    
+    UE5 polls this endpoint to spawn/update gardener NPCs.
+    """
+    try:
+        members = get_team_members()
+        return jsonify({
+            "status": "ok",
+            "count": len(members),
+            "members": members
+        }), 200
+    except Exception as e:
+        logger.error(f"Error getting team members: {e}")
+        return jsonify({
+            "status": "error",
+            "message": str(e),
+            "members": []
+        }), 500
+
+
+@app.route('/audio_events', methods=['GET'])
+def audio_events() -> tuple[Response, int]:
+    """Return queued audio events for UE5 to play.
+    
+    UE5 polls this endpoint for sound triggers, then events are cleared.
+    """
+    global audio_event_queue
+    
+    # Copy and clear the queue
+    events = audio_event_queue.copy()
+    audio_event_queue = []
+    
+    if events:
+        logger.info(f"🔊 Returning {len(events)} audio events to UE5")
+    
+    return jsonify({
+        "status": "ok",
+        "count": len(events),
+        "events": events
+    }), 200
 
 
 # ============================================================================

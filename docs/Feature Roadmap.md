@@ -38,24 +38,24 @@ Connecting the garden's atmosphere to overall sprint health and velocity.
 
 ---
 
-## Phase 4: Social Layer
+## Phase 4: Social Layer 🔄
 Bringing team identity and presence into the Digital Twin of Organization.
 
 ### Team Member Avatars
-- **Assignee Metadata**: Identifying owners of tasks via the Jira API.
+- **Assignee Metadata**: ✅ Identifying owners of tasks via the Jira API.
 - **Gardener NPCs**: Creating representative characters for team members.
 - **Task Spawning**: Placing avatars near their assigned work areas in the garden.
 - **Social Interaction**: Shared animations for task completion and maintenance.
 
 ---
 
-## Phase 5: Audio Feedback
+## Phase 5: Audio Feedback 🔄
 Enhancing immersion through a reactive and evocative soundscape.
 
 ### Ambient Soundscape
-- **Success Chimes**: Pleasing audio cues for task completion and successes.
+- **Success Chimes**: ✅ Audio event queue for task completion and successes.
 - **Productivity Intensity**: Birdsong and nature sounds tied to the count of **Done** issues.
-- **Risk Notification**: Ominous ambient tones for blockers or critical-path delays.
+- **Risk Notification**: ✅ Audio events for blockers or critical-path delays.
 
 ---
 
