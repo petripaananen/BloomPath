@@ -1,8 +1,12 @@
 import os
+import re
 import logging
 import time
+from datetime import datetime
+from typing import Optional, Any
+
 import requests
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 from dotenv import load_dotenv
 from requests.auth import HTTPBasicAuth
 from functools import wraps
@@ -42,6 +46,7 @@ UE5_TIME_FUNCTION = os.getenv("UE5_TIME_FUNCTION", "Set_Time_Of_Day")
 
 # Sprint Health Configuration
 JIRA_BOARD_ID = os.getenv("JIRA_BOARD_ID")
+JIRA_STORY_POINTS_FIELD = os.getenv("JIRA_STORY_POINTS_FIELD", "customfield_10016")
 
 # Retry configuration
 MAX_RETRIES = 3
@@ -77,15 +82,32 @@ PRIORITY_COLORS = {
     "Lowest": {"R": 0.5, "G": 0.5, "B": 0.5},   # Gray - minimal
 }
 
+# Issue key validation pattern (e.g., KAN-123, PROJ-1)
+ISSUE_KEY_PATTERN = re.compile(r'^[A-Z][A-Z0-9]+-\d+$')
+
+
+# ============================================================================
+# Jira Authentication Helper
+# ============================================================================
+def get_jira_auth() -> HTTPBasicAuth:
+    """Get centralized Jira authentication."""
+    return HTTPBasicAuth(JIRA_EMAIL, JIRA_API_TOKEN)
+
+
+def validate_issue_key(issue_key: str) -> bool:
+    """Validate Jira issue key format."""
+    return bool(ISSUE_KEY_PATTERN.match(issue_key))
+
+
 # ============================================================================
 # Retry Decorator
 # ============================================================================
-def retry_on_failure(max_retries=MAX_RETRIES, delay=RETRY_DELAY):
+def retry_on_failure(max_retries: int = MAX_RETRIES, delay: float = RETRY_DELAY):
     """Decorator to retry a function on failure."""
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            last_exception = None
+            last_exception: Optional[Exception] = None
             for attempt in range(max_retries):
                 try:
                     return func(*args, **kwargs)
@@ -104,7 +126,13 @@ def retry_on_failure(max_retries=MAX_RETRIES, delay=RETRY_DELAY):
 # UE5 Remote Control Functions
 # ============================================================================
 @retry_on_failure()
-def trigger_ue5_growth(branch_id, growth_type="leaf", growth_modifier=1.0, color=None, epic_key=None):
+def trigger_ue5_growth(
+    branch_id: str,
+    growth_type: str = "leaf",
+    growth_modifier: float = 1.0,
+    color: Optional[dict[str, float]] = None,
+    epic_key: Optional[str] = None
+) -> dict[str, Any]:
     """Calls the UE5 Remote Control API to trigger the Grow_Leaves function.
     
     Args:
@@ -139,7 +167,7 @@ def trigger_ue5_growth(branch_id, growth_type="leaf", growth_modifier=1.0, color
 
 
 @retry_on_failure()
-def trigger_ue5_shrink(branch_id):
+def trigger_ue5_shrink(branch_id: str) -> dict[str, Any]:
     """Calls the UE5 Remote Control API to trigger the Shrink_Leaves function."""
     payload = {
         "objectPath": UE5_ACTOR_PATH,
@@ -157,7 +185,7 @@ def trigger_ue5_shrink(branch_id):
 
 
 @retry_on_failure()
-def trigger_ue5_thorns(branch_id, epic_key=None):
+def trigger_ue5_thorns(branch_id: str, epic_key: Optional[str] = None) -> dict[str, Any]:
     """Calls the UE5 Remote Control API to add thorns for blocked issues."""
     payload = {
         "objectPath": UE5_ACTOR_PATH,
@@ -176,7 +204,7 @@ def trigger_ue5_thorns(branch_id, epic_key=None):
 
 
 @retry_on_failure()
-def trigger_ue5_remove_thorns(branch_id):
+def trigger_ue5_remove_thorns(branch_id: str) -> dict[str, Any]:
     """Calls the UE5 Remote Control API to remove thorns when blocker is resolved."""
     payload = {
         "objectPath": UE5_ACTOR_PATH,
@@ -197,7 +225,7 @@ def trigger_ue5_remove_thorns(branch_id):
 # Jira Transition (UE5 → Jira)
 # ============================================================================
 @retry_on_failure()
-def transition_issue_to_done(issue_key):
+def transition_issue_to_done(issue_key: str) -> dict[str, str]:
     """Transition a Jira issue to 'Done' status.
     
     This enables bidirectional flow: player waters flower in UE5 → issue moves to Done.
@@ -207,7 +235,7 @@ def transition_issue_to_done(issue_key):
         raise ValueError("Missing Jira configuration")
     
     url = f"https://{JIRA_DOMAIN}/rest/api/3/issue/{issue_key}/transitions"
-    auth = HTTPBasicAuth(JIRA_EMAIL, JIRA_API_TOKEN)
+    auth = get_jira_auth()
     
     # Get available transitions
     response = requests.get(url, auth=auth, timeout=10)
@@ -215,7 +243,7 @@ def transition_issue_to_done(issue_key):
     transitions = response.json().get('transitions', [])
     
     # Find the "Done" transition (case-insensitive)
-    done_transition = None
+    done_transition: Optional[str] = None
     for t in transitions:
         if t['name'].lower() == 'done':
             done_transition = t['id']
@@ -238,7 +266,7 @@ def transition_issue_to_done(issue_key):
 # Sprint Health (Environmental Dynamics)
 # ============================================================================
 @retry_on_failure()
-def get_active_sprint():
+def get_active_sprint() -> Optional[dict[str, Any]]:
     """Get the active sprint from Jira board.
     
     Returns:
@@ -250,7 +278,7 @@ def get_active_sprint():
         return None
     
     url = f"https://{JIRA_DOMAIN}/rest/agile/1.0/board/{JIRA_BOARD_ID}/sprint"
-    auth = HTTPBasicAuth(JIRA_EMAIL, JIRA_API_TOKEN)
+    auth = get_jira_auth()
     
     response = requests.get(url, params={"state": "active"}, auth=auth, timeout=10)
     response.raise_for_status()
@@ -262,18 +290,18 @@ def get_active_sprint():
 
 
 @retry_on_failure()
-def get_sprint_issues(sprint_id):
+def get_sprint_issues(sprint_id: int) -> list[dict[str, Any]]:
     """Get all issues in a sprint with their status and story points.
     
     Returns:
         list of issues with key, status, and storyPoints
     """
     url = f"https://{JIRA_DOMAIN}/rest/agile/1.0/sprint/{sprint_id}/issue"
-    auth = HTTPBasicAuth(JIRA_EMAIL, JIRA_API_TOKEN)
+    auth = get_jira_auth()
     
     response = requests.get(
         url, 
-        params={"fields": "status,customfield_10016,issuetype"},  # customfield_10016 is often story points
+        params={"fields": f"status,{JIRA_STORY_POINTS_FIELD},issuetype"},
         auth=auth, 
         timeout=10
     )
@@ -282,7 +310,7 @@ def get_sprint_issues(sprint_id):
     return response.json().get('issues', [])
 
 
-def calculate_sprint_health(issues):
+def calculate_sprint_health(issues: list[dict[str, Any]]) -> str:
     """Calculate weather based on sprint issue status.
     
     Returns: 'sunny' | 'cloudy' | 'storm'
@@ -318,13 +346,11 @@ def calculate_sprint_health(issues):
         return "sunny"
 
 
-def calculate_sprint_progress(sprint):
+def calculate_sprint_progress(sprint: Optional[dict[str, Any]]) -> float:
     """Calculate sprint progress as percentage based on dates.
     
     Returns: float 0.0 to 1.0 (maps to dawn → sunset in UE5)
     """
-    from datetime import datetime
-    
     if not sprint:
         return 0.5  # Default to midday
     
@@ -354,7 +380,7 @@ def calculate_sprint_progress(sprint):
 
 
 @retry_on_failure()
-def trigger_ue5_weather(weather):
+def trigger_ue5_weather(weather: str) -> dict[str, Any]:
     """Send weather state to UE5."""
     payload = {
         "objectPath": UE5_ACTOR_PATH,
@@ -372,7 +398,7 @@ def trigger_ue5_weather(weather):
 
 
 @retry_on_failure()
-def trigger_ue5_time(progress):
+def trigger_ue5_time(progress: float) -> dict[str, Any]:
     """Send time-of-day to UE5 based on sprint progress."""
     payload = {
         "objectPath": UE5_ACTOR_PATH,
@@ -392,7 +418,7 @@ def trigger_ue5_time(progress):
 # ============================================================================
 # Jira Integration
 # ============================================================================
-def get_epic_key(issue):
+def get_epic_key(issue: dict[str, Any]) -> Optional[str]:
     """Extract Epic key from Jira issue.
     
     Jira Cloud uses 'parent' field for Epic links in next-gen projects,
@@ -414,7 +440,7 @@ def get_epic_key(issue):
     return None
 
 
-def get_growth_params(issue):
+def get_growth_params(issue: dict[str, Any]) -> tuple[str, float, dict[str, float], Optional[str]]:
     """Extract all growth parameters from Jira issue data.
     
     Returns:
@@ -437,7 +463,7 @@ def get_growth_params(issue):
     return growth_type, growth_modifier, color, epic_key
 
 
-def sync_initial_state():
+def sync_initial_state() -> None:
     """Queries Jira for all 'Done' issues and triggers growth in UE5."""
     logger.info("Starting initial state synchronization...")
     
@@ -447,13 +473,14 @@ def sync_initial_state():
 
     jql = f"project = '{JIRA_PROJECT_KEY}' AND status = 'Done'"
     url = f"https://{JIRA_DOMAIN}/rest/api/3/search"
-    auth = HTTPBasicAuth(JIRA_EMAIL, JIRA_API_TOKEN)
+    auth = get_jira_auth()
     
     try:
         response = requests.get(
             url, 
             params={"jql": jql, "maxResults": 100, "fields": "key,issuetype,priority,parent,customfield_10014"}, 
-            auth=auth
+            auth=auth,
+            timeout=30
         )
         response.raise_for_status()
         issues = response.json().get("issues", [])
@@ -475,7 +502,7 @@ def sync_initial_state():
         logger.error(f"Error during Jira synchronization: {e}")
 
 
-def was_reopened(data):
+def was_reopened(data: dict[str, Any]) -> bool:
     """Check if the issue was reopened (status changed FROM Done)."""
     changelog = data.get('changelog', {})
     for item in changelog.get('items', []):
@@ -484,7 +511,7 @@ def was_reopened(data):
     return False
 
 
-def was_blocked(data):
+def was_blocked(data: dict[str, Any]) -> bool:
     """Check if the issue was just blocked (status changed TO a blocker status)."""
     changelog = data.get('changelog', {})
     for item in changelog.get('items', []):
@@ -493,7 +520,7 @@ def was_blocked(data):
     return False
 
 
-def was_unblocked(data):
+def was_unblocked(data: dict[str, Any]) -> bool:
     """Check if the issue was unblocked (status changed FROM a blocker status)."""
     changelog = data.get('changelog', {})
     for item in changelog.get('items', []):
@@ -586,7 +613,7 @@ def jira_webhook():
 
 
 @app.route('/complete_task', methods=['POST'])
-def complete_task():
+def complete_task() -> tuple[Response, int]:
     """Handle task completion from UE5 (watering a flower).
     
     This endpoint enables bidirectional flow:
@@ -601,6 +628,11 @@ def complete_task():
     if not issue_key:
         logger.warning("Received /complete_task without issue_key")
         return jsonify({"status": "error", "message": "Missing issue_key"}), 400
+    
+    # Validate issue key format (e.g., KAN-123)
+    if not validate_issue_key(issue_key):
+        logger.warning(f"Received /complete_task with invalid issue_key: {issue_key}")
+        return jsonify({"status": "error", "message": f"Invalid issue_key format: {issue_key}"}), 400
     
     logger.info(f"🌊 Watering received from UE5 for {issue_key}")
     
