@@ -5,7 +5,7 @@ import logging
 import requests
 from typing import Optional, Dict, Any
 
-logger = logging.getLogger("BloomPath.WorldLabs")
+logger = logging.getLogger("BloomPath.Client.WorldLabs")
 
 class WorldLabsClient:
     """Client for interacting with the World Labs API."""
@@ -23,7 +23,7 @@ class WorldLabsClient:
             "Content-Type": "application/json"
         }
 
-    def generate_world(self, prompt: str, output_path: str) -> Optional[str]:
+    def generate_world(self, prompt: str, output_path: str) -> Optional[Dict[str, str]]:
         """
         Generates a 3D world from a text prompt.
         
@@ -32,7 +32,7 @@ class WorldLabsClient:
             output_path: Local path to save the resulting file.
             
         Returns:
-            Path to the saved file if successful, None otherwise.
+            Dict with 'mesh_path' and 'image_path' if successful, None otherwise.
         """
         if not self.api_key:
             logger.error("Cannot generate world: Missing API Key")
@@ -101,6 +101,9 @@ class WorldLabsClient:
                         logger.error("Generation succeeded but no mesh URL found in response")
                         # For debugging, log keys
                         logger.info(f"Available assets: {assets.keys()}")
+                    
+                    # Try to get thumbnail
+                    thumbnail_url = assets.get("image", {}).get("url") or assets.get("thumbnail", {}).get("url")
                     break
                     
             except Exception as e:
@@ -110,7 +113,9 @@ class WorldLabsClient:
             logger.error("Generation timed out or did not return a valid URL in time")
             return None
 
-        # 3. Download Asset
+        result_paths = {}
+
+        # 3. Download Asset (Mesh)
         try:
             logger.info("Downloading generated asset...")
             asset_resp = requests.get(result_url, stream=True)
@@ -124,8 +129,26 @@ class WorldLabsClient:
                     f.write(chunk)
                     
             logger.info(f"Asset saved to {output_path}")
-            return output_path
+            result_paths["mesh_path"] = output_path
             
         except Exception as e:
             logger.error(f"Failed to download asset: {e}")
             return None
+
+        # 4. Download Thumbnail (Image)
+        if thumbnail_url:
+            try:
+                img_path = output_path.replace(".gltf", ".png").replace(".glb", ".png")
+                logger.info(f"Downloading thumbnail to {img_path}...")
+                img_resp = requests.get(thumbnail_url, stream=True)
+                img_resp.raise_for_status()
+                
+                with open(img_path, 'wb') as f:
+                    for chunk in img_resp.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                
+                result_paths["image_path"] = img_path
+            except Exception as e:
+                logger.warning(f"Failed to download thumbnail: {e}")
+        
+        return result_paths

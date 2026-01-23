@@ -1,0 +1,132 @@
+{
+  "scene_description": "A serene Chinese garden with a stone path, pond, bridge, walls with moon gates, and various plants and decorative elements.",
+  "objects": [
+    {
+      "id": "obj_001",
+      "semantic_type": "stone_path",
+      "tags": [
+        "Walkable",
+        "SoundFootstep_Stone"
+      ],
+      "physics": {
+        "friction": 0.7,
+        "mass_category": "static",
+        "destructible": false
+      }
+    },
+    {
+      "id": "obj_002",
+      "semantic_type": "wooden_bridge",
+      "tags": [
+        "Walkable",
+        "SoundFootstep_Wood"
+      ],
+      "physics": {
+        "friction": 0.6,
+        "mass_category": "medium",
+        "destructible": false
+      }
+    },
+    {
+      "id": "obj_003",
+      "semantic_type": "pond_water",
+      "tags": [
+        "Obstacle",
+        "Water"
+      ],
+      "physics": {
+        "friction": 0.1,
+        "mass_category": "static",
+        "destructible": false
+      }
+    },
+    {
+      "id": "obj_004",
+      "semantic_type": "garden_wall",
+      "tags": [
+        "Obstacle"
+      ],
+      "physics": {
+        "friction": 0.8,
+        "mass_category": "static",
+        "destructible": false
+      }
+    },
+    {
+      "id": "obj_005",
+      "semantic_type": "moon_gate",
+      "tags": [
+        "Walkable"
+      ],
+      "physics": {
+        "friction": 0.8,
+        "mass_category": "static",
+        "destructible": false
+      }
+    },
+    {
+      "id": "obj_006",
+      "semantic_type": "stone_lantern",
+      "tags": [
+        "Decorative",
+        "Interactable"
+      ],
+      "physics": {
+        "friction": 0.7,
+        "mass_category": "medium",
+        "destructible": false
+      }
+    },
+    {
+      "id": "obj_007",
+      "semantic_type": "bamboo",
+      "tags": [
+        "Decorative"
+      ],
+      "physics": {
+        "friction": 0.4,
+        "mass_category": "light",
+        "destructible": true
+      }
+    },
+    {
+      "id": "obj_008",
+      "semantic_type": "pavilion",
+      "tags": [
+        "Walkable",
+        "Obstacle"
+      ],
+      "physics": {
+        "friction": 0.7,
+        "mass_category": "static",
+        "destructible": false
+      }
+    },
+    {
+      "id": "obj_009",
+      "semantic_type": "lily_pads",
+      "tags": [
+        "Obstacle",
+        "Decorative"
+      ],
+      "physics": {
+        "friction": 0.3,
+        "mass_category": "light",
+        "destructible": true
+      }
+    },
+    {
+      "id": "obj_010",
+      "semantic_type": "rocks",
+      "tags": [
+        "Obstacle",
+        "Climbable"
+      ],
+      "physics": {
+        "friction": 0.8,
+        "mass_category": "medium",
+        "destructible": false
+      }
+    }
+  ]
+}

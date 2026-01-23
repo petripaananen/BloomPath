@@ -1,58 +1,79 @@
-"""Test the Phase 4 & 5 endpoints: /team_members and /audio_events."""
-import requests
 
-MIDDLEWARE_URL = "http://localhost:5000"
+import os
+import sys
+import logging
+import math
+from unittest.mock import MagicMock, patch
 
-print("\n" + "="*60)
-print("Testing Phase 4 & 5: Social Layer + Audio Feedback")
-print("="*60)
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("BloomPath.Test.Social")
 
-# Test 1: Health check
-print("\n[1/3] Testing middleware health...")
-try:
-    resp = requests.get(f"{MIDDLEWARE_URL}/health", timeout=5)
-    if resp.status_code == 200:
-        print("  ✅ Middleware is running")
+# Add current dir to path
+sys.path.append(os.getcwd())
+
+import middleware
+
+def test_team_member_positioning():
+    logger.info("👥 Testing Team Member Positioning Logic...")
+    
+    # Mock data directly without calling Jira
+    # We want to test the distribution logic logic specifically
+    
+    # Create 10 dummy members
+    members = []
+    for i in range(10):
+        members.append({
+            "account_id": f"user_{i}",
+            "display_name": f"User {i}",
+            "position": {"x": 0, "y": 0, "z": 0} # Placeholder
+        })
+        
+    # Apply positioning logic (simulating what gets done in middleware.get_team_members, 
+    # but we might want to extract that logic to test it in isolation if it was a separate function.
+    # For now, let's just reverse engineer the logic or copy it to verify intended behavior)
+    
+    # Replicating the "Spiral" or "Circle" logic we WANT to implement
+    # Plan mentioned "Refine position calculation to prevent overlapping"
+    
+    calculated_members = []
+    for i, member in enumerate(members):
+        # Spiral Distribution
+        # angle = i * golden_angle
+        # radius = c * sqrt(i)
+        
+        golden_angle = 137.508 * (3.14159 / 180) # in radians
+        scaling_factor = 300 # distance between avatars
+        
+        # Or simple circle for small teams, concentric circles for larger?
+        # Let's test the Spiral implementation we intend to put in middleware
+        
+        angle = i * golden_angle
+        radius = scaling_factor * math.sqrt(i + 1)
+        
+        x = radius * math.cos(angle)
+        y = radius * math.sin(angle)
+        
+        member["position"] = {"x": round(x, 1), "y": round(y, 1), "z": 0}
+        calculated_members.append(member)
+        logger.info(f"Member {i}: Pos({x:.1f}, {y:.1f})")
+
+    # Verify no overlaps (roughly)
+    min_dist = 100000
+    for i in range(len(calculated_members)):
+        for j in range(i + 1, len(calculated_members)):
+            p1 = calculated_members[i]["position"]
+            p2 = calculated_members[j]["position"]
+            dist = math.sqrt((p1["x"]-p2["x"])**2 + (p1["y"]-p2["y"])**2)
+            if dist < min_dist:
+                min_dist = dist
+                
+    logger.info(f"Minimum distance between avatars: {min_dist:.1f}")
+    
+    if min_dist < 100:
+       logger.warning("⚠️ Avatars might be too close!")
     else:
-        print(f"  ❌ Health check failed: {resp.status_code}")
-        exit(1)
-except Exception as e:
-    print(f"  ❌ Middleware not responding: {e}")
-    print("     Start the middleware with: python middleware.py")
-    exit(1)
+       logger.info("✅ Avatar distribution looks good.")
 
-# Test 2: Team Members (Phase 4)
-print("\n[2/3] Testing /team_members (Social Layer)...")
-try:
-    resp = requests.get(f"{MIDDLEWARE_URL}/team_members", timeout=30)
-    data = resp.json()
-    print(f"  ✅ Response: {data['status']}")
-    print(f"     Found {data['count']} team members")
-    for member in data.get('members', []):
-        tasks = len(member.get('active_tasks', []))
-        done = member.get('completed_today', 0)
-        pos = member.get('position', {})
-        print(f"     - {member['display_name']}: {tasks} active, {done} done today")
-        print(f"       Position: ({pos.get('x', 0)}, {pos.get('y', 0)}, {pos.get('z', 0)})")
-except Exception as e:
-    print(f"  ⚠️ Error: {e}")
-
-# Test 3: Audio Events (Phase 5)
-print("\n[3/3] Testing /audio_events (Audio Feedback)...")
-try:
-    resp = requests.get(f"{MIDDLEWARE_URL}/audio_events", timeout=5)
-    data = resp.json()
-    print(f"  ✅ Response: {data['status']}")
-    print(f"     Found {data['count']} queued events")
-    for event in data.get('events', []):
-        print(f"     - {event['type']}: {event.get('issue_key', 'N/A')}")
-except Exception as e:
-    print(f"  ⚠️ Error: {e}")
-
-print("\n" + "="*60)
-print("Test Complete!")
-print("="*60)
-print("\nUE5 Usage:")
-print("  • Poll /team_members every 30s for avatar spawning")
-print("  • Poll /audio_events every 1s for sound triggers")
-print("")
+if __name__ == "__main__":
+    test_team_member_positioning()

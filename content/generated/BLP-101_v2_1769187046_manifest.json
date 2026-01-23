@@ -1,0 +1,108 @@
+{
+  "scene_description": "A serene Chinese garden with a stone path, pond, bridge, walls with moon gates, and various plants.",
+  "objects": [
+    {
+      "id": "obj_001",
+      "semantic_type": "stone_path",
+      "tags": [
+        "Walkable",
+        "SoundFootstep_Stone"
+      ],
+      "physics": {
+        "friction": 0.7,
+        "mass_category": "static",
+        "destructible": false
+      }
+    },
+    {
+      "id": "obj_002",
+      "semantic_type": "wooden_bridge",
+      "tags": [
+        "Walkable",
+        "SoundFootstep_Wood"
+      ],
+      "physics": {
+        "friction": 0.6,
+        "mass_category": "medium",
+        "destructible": true
+      }
+    },
+    {
+      "id": "obj_003",
+      "semantic_type": "pond_water",
+      "tags": [
+        "Swimable",
+        "Hazard_Drowning"
+      ],
+      "physics": {
+        "friction": 0.1,
+        "mass_category": "static",
+        "destructible": false
+      }
+    },
+    {
+      "id": "obj_004",
+      "semantic_type": "garden_wall",
+      "tags": [
+        "Obstacle",
+        "Decorative"
+      ],
+      "physics": {
+        "friction": 0.8,
+        "mass_category": "static",
+        "destructible": false
+      }
+    },
+    {
+      "id": "obj_005",
+      "semantic_type": "stone_lantern",
+      "tags": [
+        "Decorative",
+        "Interactable_LightSource"
+      ],
+      "physics": {
+        "friction": 0.7,
+        "mass_category": "medium",
+        "destructible": true
+      }
+    },
+    {
+      "id": "obj_006",
+      "semantic_type": "lily_pads",
+      "tags": [
+        "Obstacle",
+        "Decorative"
+      ],
+      "physics": {
+        "friction": 0.3,
+        "mass_category": "light",
+        "destructible": true
+      }
+    },
+    {
+      "id": "obj_007",
+      "semantic_type": "bamboo",
+      "tags": [
+        "Decorative"
+      ],
+      "physics": {
+        "friction": 0.5,
+        "mass_category": "light",
+        "destructible": true
+      }
+    },
+    {
+      "id": "obj_008",
+      "semantic_type": "gazebo",
+      "tags": [
+        "Walkable",
+        "Decorative"
+      ],
+      "physics": {
+        "friction": 0.6,
+        "mass_category": "static",
+        "destructible": true
+      }
+    }
+  ]
+}

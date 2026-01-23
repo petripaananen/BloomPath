@@ -15,7 +15,7 @@ from requests.auth import HTTPBasicAuth
 
 load_dotenv()
 
-logger = logging.getLogger("BloomPath.ValidationAgent")
+logger = logging.getLogger("BloomPath.Analysis.Validation")
 
 # Configuration
 JIRA_DOMAIN = os.getenv("JIRA_DOMAIN")

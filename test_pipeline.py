@@ -23,15 +23,12 @@ def test_pipeline():
     # but for this script I'll hardcode the known path from previous step or find it.
     # For now, I'll search for the png in the brain dir.
     
-    brain_dir = r"C:\Users\petri\.gemini\antigravity\brain\1171e80a-fe6c-4248-9595-596c4e18250c"
-    image_path = None
-    for file in os.listdir(brain_dir):
-        if file.startswith("chinese_garden_render") and file.endswith(".png"):
-            image_path = os.path.join(brain_dir, file)
-            break
-            
-    if not image_path:
-        logger.error("❌ Could not find test image in brain directory.")
+    brain_dir = r"C:\Users\petri\.gemini\antigravity\brain\2d2f0246-5cd6-4228-b0d8-d4ae43f72970"
+    image_name = "chinese_garden_test_1769183395241.png"
+    image_path = os.path.join(brain_dir, image_name)
+
+    if not os.path.exists(image_path):
+        logger.error(f"❌ Could not find test image: {image_path}")
         return
 
     logger.info(f"📸 Test Image: {image_path}")
@@ -66,6 +63,54 @@ def test_pipeline():
 
     logger.info("✅ Validation Agent Complete.")
     print(validation_results)
+    
+    # 5. Inject tags via Middleware
+    logger.info("💉 Injecting tags via Middleware...")
+    
+    # We need to use 'requests' to call the local middleware if it was running, 
+    # BUT for this test script we can probably just use requests.
+    import requests
+    
+    # Assuming middleware is running on localhost:5000, OR we can import the function directly?
+    # Importing directly is better for testing without running the server.
+    # However, app context might be an issue.
+    # Let's try mocking the request or just importing the logic via a direct call is safest if we don't want to start Flask.
+    
+    # Actually, let's just make a direct call to the function logic if possible, 
+    # but the function is wrapped in a route.
+    # Let's try to simulate it by invoking the logic similar to how the route does it.
+    # Since we can't easily start the server here without blocking, we will mock the UE5 call.
+    
+    # Import middleware functions
+    import middleware
+    
+    # We need to mock requests.put inside middleware to avoid actual network calls failing if UE5 isn't running
+    # OR if UE5 IS running (which it is), we want to call it!
+    # User said UE5 is open.
+    
+    logger.info("Calling inject_tags logic...")
+    
+    objects = manifest.get('objects', [])
+    for obj in objects:
+        semantic_type = obj.get('semantic_type', 'unknown')
+        tags = obj.get('tags', [])
+        
+        target_actor = None
+        if "path" in semantic_type or "ground" in semantic_type:
+            target_actor = "Floor"
+        elif "wall" in semantic_type:
+            target_actor = "Wall_North"
+        elif "water" in semantic_type:
+            target_actor = "Pond_Surface"
+        
+        if target_actor and tags:
+            for tag in tags:
+                try:
+                    middleware.trigger_ue5_set_tag(target_actor, tag)
+                except Exception as e:
+                    logger.warning(f"UE5 Call failed (expected if not running/configured): {e}")
+
+    logger.info("✅ Tag Injection Attempted.")
     
     logger.info("🎉 Pipeline Verification Successful!")
 

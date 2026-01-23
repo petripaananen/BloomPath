@@ -27,7 +27,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S"
 )
-logger = logging.getLogger("BloomPath")
+logger = logging.getLogger("BloomPath.Middleware")
 
 app = Flask(__name__)
 
@@ -37,17 +37,24 @@ app = Flask(__name__)
 JIRA_DOMAIN = os.getenv("JIRA_DOMAIN")
 JIRA_EMAIL = os.getenv("JIRA_EMAIL")
 JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN")
-JIRA_PROJECT_KEY = os.getenv("JIRA_PROJECT_KEY")
+JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN")
+# Support multiple projects (comma-separated in env, e.g., "TRI,BLP")
+JIRA_PROJECT_KEYS_RAW = os.getenv("JIRA_PROJECT_KEYS", os.getenv("JIRA_PROJECT_KEY", ""))
+JIRA_PROJECT_KEYS = [k.strip() for k in JIRA_PROJECT_KEYS_RAW.split(",") if k.strip()]
 WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET")
 
-UE5_REMOTE_CONTROL_URL = os.getenv("UE5_REMOTE_CONTROL_URL", "http://localhost:8080/remote/object/call")
-UE5_ACTOR_PATH = os.getenv("UE5_ACTOR_PATH", "/Game/Maps/Main.Main:PersistentLevel.GrowerActor")
-UE5_GROW_FUNCTION = os.getenv("UE5_GROW_FUNCTION", "Grow_Leaves")
-UE5_SHRINK_FUNCTION = os.getenv("UE5_SHRINK_FUNCTION", "Shrink_Leaves")
-UE5_THORNS_FUNCTION = os.getenv("UE5_THORNS_FUNCTION", "Add_Thorns")
-UE5_REMOVE_THORNS_FUNCTION = os.getenv("UE5_REMOVE_THORNS_FUNCTION", "Remove_Thorns")
-UE5_WEATHER_FUNCTION = os.getenv("UE5_WEATHER_FUNCTION", "Set_Weather")
-UE5_TIME_FUNCTION = os.getenv("UE5_TIME_FUNCTION", "Set_Time_Of_Day")
+from ue5_interface import (
+    trigger_ue5_growth,
+    trigger_ue5_shrink,
+    trigger_ue5_thorns,
+    trigger_ue5_remove_thorns,
+    trigger_ue5_weather,
+    trigger_ue5_time,
+    trigger_ue5_set_tag,
+    map_semantic_type_to_actor,
+    retry_on_failure,
+    UE5_ACTOR_PATH
+)
 
 # Sprint Health Configuration
 JIRA_BOARD_ID = os.getenv("JIRA_BOARD_ID")
@@ -79,13 +86,6 @@ PRIORITY_MODIFIER = {
 }
 
 # Priority to color mapping (RGB values for UE5)
-PRIORITY_COLORS = {
-    "Highest": {"R": 1.0, "G": 0.2, "B": 0.2},  # Red - urgent
-    "High": {"R": 1.0, "G": 0.6, "B": 0.1},     # Gold - important
-    "Medium": {"R": 0.3, "G": 0.8, "B": 0.3},   # Green - normal
-    "Low": {"R": 0.4, "G": 0.6, "B": 0.4},      # Moss - low priority
-    "Lowest": {"R": 0.5, "G": 0.5, "B": 0.5},   # Gray - minimal
-}
 
 # Issue key validation pattern (e.g., KAN-123, PROJ-1)
 ISSUE_KEY_PATTERN = re.compile(r'^[A-Z][A-Z0-9]+-\d+$')
@@ -112,6 +112,26 @@ def push_audio_event(event_type: str, issue_key: Optional[str] = None,
     
     audio_event_queue.append(event)
     logger.info(f"🔔 Audio event queued: {event_type} (queue size: {len(audio_event_queue)})")
+    
+    # Try to trigger immediate sound in UE5
+    try:
+        # Map event types to sound names expected by UE5
+        sound_map = {
+            "task_completed": "Success_Chime",
+            "blocker_added": "Error_Buzz",
+            "task_reopened": "Shrink_Wraow",
+            "blocker_resolved": "Relief_Sigh"
+        }
+        sound_name = sound_map.get(event_type, "Default_Beep")
+        
+        # We import here to avoid potential circular/startup issues if this function is called early,
+        # though broadly imports at top are better. For now, following pattern of using helpers.
+        from ue5_interface import trigger_ue5_play_sound_2d
+        
+        # Fire and forget (don't fail the request if sound fails)
+        trigger_ue5_play_sound_2d(sound_name)
+    except Exception as e:
+        logger.warning(f"Failed to trigger immediate audio: {e}")
 
 
 # ============================================================================
@@ -130,123 +150,6 @@ def validate_issue_key(issue_key: str) -> bool:
 # ============================================================================
 # Retry Decorator
 # ============================================================================
-def retry_on_failure(max_retries: int = MAX_RETRIES, delay: float = RETRY_DELAY):
-    """Decorator to retry a function on failure."""
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            last_exception: Optional[Exception] = None
-            for attempt in range(max_retries):
-                try:
-                    return func(*args, **kwargs)
-                except Exception as e:
-                    last_exception = e
-                    logger.warning(f"Attempt {attempt + 1}/{max_retries} failed: {e}")
-                    if attempt < max_retries - 1:
-                        time.sleep(delay * (attempt + 1))  # Exponential backoff
-            logger.error(f"All {max_retries} attempts failed")
-            raise last_exception
-        return wrapper
-    return decorator
-
-
-# ============================================================================
-# UE5 Remote Control Functions
-# ============================================================================
-@retry_on_failure()
-def trigger_ue5_growth(
-    branch_id: str,
-    growth_type: str = "leaf",
-    growth_modifier: float = 1.0,
-    color: Optional[dict[str, float]] = None,
-    epic_key: Optional[str] = None
-) -> dict[str, Any]:
-    """Calls the UE5 Remote Control API to trigger the Grow_Leaves function.
-    
-    Args:
-        branch_id: The Jira issue key (e.g., KAN-28)
-        growth_type: Type of growth based on issue type (leaf, branch, flower, etc.)
-        growth_modifier: Size modifier based on priority
-        color: RGB color dict based on priority
-        epic_key: Parent Epic key for tree mapping
-    """
-    if color is None:
-        color = PRIORITY_COLORS.get("Medium")
-    
-    payload = {
-        "objectPath": UE5_ACTOR_PATH,
-        "functionName": UE5_GROW_FUNCTION,
-        "parameters": {
-            "Target_Branch_ID": branch_id,
-            "Growth_Type": growth_type,
-            "Growth_Modifier": growth_modifier,
-            "Color_R": color.get("R", 0.3),
-            "Color_G": color.get("G", 0.8),
-            "Color_B": color.get("B", 0.3),
-            "Epic_ID": epic_key or ""
-        },
-        "generateTransaction": True
-    }
-    
-    logger.info(f"Triggering UE5 growth: {branch_id} (type={growth_type}, modifier={growth_modifier}, epic={epic_key})")
-    response = requests.put(UE5_REMOTE_CONTROL_URL, json=payload, timeout=5)
-    response.raise_for_status()
-    return response.json()
-
-
-@retry_on_failure()
-def trigger_ue5_shrink(branch_id: str) -> dict[str, Any]:
-    """Calls the UE5 Remote Control API to trigger the Shrink_Leaves function."""
-    payload = {
-        "objectPath": UE5_ACTOR_PATH,
-        "functionName": UE5_SHRINK_FUNCTION,
-        "parameters": {
-            "Target_Branch_ID": branch_id
-        },
-        "generateTransaction": True
-    }
-    
-    logger.info(f"Triggering UE5 shrink: {branch_id}")
-    response = requests.put(UE5_REMOTE_CONTROL_URL, json=payload, timeout=5)
-    response.raise_for_status()
-    return response.json()
-
-
-@retry_on_failure()
-def trigger_ue5_thorns(branch_id: str, epic_key: Optional[str] = None) -> dict[str, Any]:
-    """Calls the UE5 Remote Control API to add thorns for blocked issues."""
-    payload = {
-        "objectPath": UE5_ACTOR_PATH,
-        "functionName": UE5_THORNS_FUNCTION,
-        "parameters": {
-            "Target_Branch_ID": branch_id,
-            "Epic_ID": epic_key or ""
-        },
-        "generateTransaction": True
-    }
-    
-    logger.info(f"Triggering UE5 thorns (blocker): {branch_id}")
-    response = requests.put(UE5_REMOTE_CONTROL_URL, json=payload, timeout=5)
-    response.raise_for_status()
-    return response.json()
-
-
-@retry_on_failure()
-def trigger_ue5_remove_thorns(branch_id: str) -> dict[str, Any]:
-    """Calls the UE5 Remote Control API to remove thorns when blocker is resolved."""
-    payload = {
-        "objectPath": UE5_ACTOR_PATH,
-        "functionName": UE5_REMOVE_THORNS_FUNCTION,
-        "parameters": {
-            "Target_Branch_ID": branch_id
-        },
-        "generateTransaction": True
-    }
-    
-    logger.info(f"Triggering UE5 remove thorns: {branch_id}")
-    response = requests.put(UE5_REMOTE_CONTROL_URL, json=payload, timeout=5)
-    response.raise_for_status()
-    return response.json()
 
 
 # ============================================================================
@@ -518,7 +421,14 @@ def sync_initial_state() -> None:
         logger.warning("Missing Jira configuration. Skipping synchronization.")
         return
 
-    jql = f"project = '{JIRA_PROJECT_KEY}' AND status = 'Done'"
+    if not all([JIRA_DOMAIN, JIRA_EMAIL, JIRA_API_TOKEN, JIRA_PROJECT_KEYS]):
+        logger.warning("Missing Jira configuration. Skipping synchronization.")
+        return
+
+    # Construct JQL for multiple projects
+    projects_str = ", ".join([f"'{k}'" for k in JIRA_PROJECT_KEYS])
+    jql = f"project in ({projects_str}) AND status = 'Done'"
+    
     url = f"https://{JIRA_DOMAIN}/rest/api/3/search"
     auth = get_jira_auth()
     
@@ -596,7 +506,15 @@ def get_team_members() -> list[dict[str, Any]]:
     auth = get_jira_auth()
     
     # Get all active issues with assignees
-    jql = f"project = '{JIRA_PROJECT_KEY}' AND assignee IS NOT EMPTY AND status != Done"
+    if not all([JIRA_DOMAIN, JIRA_EMAIL, JIRA_API_TOKEN, JIRA_PROJECT_KEYS]):
+        logger.warning("Missing Jira configuration for team members")
+        return []
+    
+    auth = get_jira_auth()
+    
+    # Get all active issues with assignees from all configured projects
+    projects_str = ", ".join([f"'{k}'" for k in JIRA_PROJECT_KEYS])
+    jql = f"project in ({projects_str}) AND assignee IS NOT EMPTY AND status != Done"
     url = f"https://{JIRA_DOMAIN}/rest/api/3/search"
     
     response = requests.get(
@@ -610,7 +528,7 @@ def get_team_members() -> list[dict[str, Any]]:
     
     # Also get issues completed today
     today = datetime.now().strftime("%Y-%m-%d")
-    jql_done = f"project = '{JIRA_PROJECT_KEY}' AND status = Done AND statusCategoryChangedDate >= '{today}'"
+    jql_done = f"project in ({projects_str}) AND status = Done AND statusCategoryChangedDate >= '{today}'"
     
     response_done = requests.get(
         url,
@@ -660,15 +578,24 @@ def get_team_members() -> list[dict[str, Any]]:
                 "completed_today": 1
             }
     
-    # Calculate positions (spread members in a circle around origin)
+    # Calculate positions (Spiral distribution to avoid overlap)
     members = list(members_dict.values())
+    import math
+    golden_angle = 137.508 * (math.pi / 180) # in radians
+    scaling_factor = 300 # distance between avatars
+    
     for i, member in enumerate(members):
-        angle = (2 * 3.14159 * i) / max(len(members), 1)
-        radius = 500  # 500 units from center
+        # i+1 to avoid 0 radius if desired, or i is fine for center
+        radius = scaling_factor * math.sqrt(i + 1)
+        angle = i * golden_angle
+        
+        x = radius * math.cos(angle)
+        y = radius * math.sin(angle)
+        
         member["position"] = {
-            "x": round(radius * (1 if i % 2 == 0 else -1) * ((i + 1) / 2) * 200, 1),
-            "y": round(radius * (0.5 if i % 3 == 0 else 0), 1),
-            "z": 0
+            "x": round(x, 1),
+            "y": round(y, 1),
+            "z": 100 # Spawn slightly above ground
         }
     
     logger.info(f"👥 Found {len(members)} team members with active tasks")
@@ -684,7 +611,7 @@ def health_check():
     return jsonify({
         "status": "healthy",
         "service": "BloomPath",
-        "jira_configured": all([JIRA_DOMAIN, JIRA_EMAIL, JIRA_API_TOKEN]),
+        "jira_configured": all([JIRA_DOMAIN, JIRA_EMAIL, JIRA_API_TOKEN, JIRA_PROJECT_KEYS]),
         "ue5_endpoint": UE5_REMOTE_CONTROL_URL
     }), 200
 
@@ -710,6 +637,28 @@ def jira_webhook():
     status = fields.get('status', {}).get('name')
     
     logger.info(f"Webhook received: [{event_type}] {issue_key} → {status}")
+    
+    # Check for World Generation / Genie trigger
+    # Triggers if label contains 'Genie' or 'WorldGen'
+    labels = fields.get('labels', [])
+    if "Genie" in labels or "WorldGen" in labels:
+        logger.info(f"✨ Triggering BloomPath Orchestrator for {issue_key}")
+        
+        # Run in background thread to avoid blocking the webhook response
+        import threading
+        # Import locally to avoid circular dependency (orchestrator -> middleware -> orchestrator)
+        from orchestrator import BloomPathOrchestrator
+        
+        def run_orch():
+            try:
+                orch = BloomPathOrchestrator()
+                orch.process_ticket(data)
+            except Exception as e:
+                logger.error(f"Orchestrator background task failed: {e}")
+                
+        threading.Thread(target=run_orch, daemon=True).start()
+        
+        return jsonify({"status": "orchestrator_triggered", "issue": issue_key}), 200
     
     # Get all growth parameters
     growth_type, growth_modifier, color, epic_key = get_growth_params(issue)
@@ -982,6 +931,60 @@ def validate_world_endpoint() -> tuple[Response, int]:
     return jsonify(result), 200
 
 
+@app.route('/inject_tags', methods=['POST'])
+def inject_tags_endpoint() -> tuple[Response, int]:
+    """Inject semantic tags into UE5 actors based on the manifest.
+    
+    Request body: {"manifest": {...}} OR uses latest manifest if empty.
+    """
+    global _latest_manifest_path
+    
+    data = request.json or {}
+    manifest = data.get('manifest')
+    
+    # Use latest manifest if not provided
+    if not manifest and _latest_manifest_path and os.path.exists(_latest_manifest_path):
+        with open(_latest_manifest_path, 'r') as f:
+            manifest = json.load(f)
+            
+    if not manifest:
+        return jsonify({
+            "status": "error", 
+            "message": "No manifest provided or found"
+        }), 404
+        
+    objects = manifest.get('objects', [])
+    logger.info(f"💉 Injecting tags for {len(objects)} objects...")
+    
+    applied_count = 0
+    failed_count = 0
+    
+    for obj in objects:
+        semantic_type = obj.get('semantic_type', 'unknown')
+        tags = obj.get('tags', [])
+        
+        # Use centralized mapping from ue5_interface
+        # Heuristic Mapping: Map semantic types to probable Actor names
+        target_actor = map_semantic_type_to_actor(semantic_type)
+        
+        if target_actor and tags:
+            try:
+                # Apply each tag
+                for tag in tags:
+                    trigger_ue5_set_tag(target_actor, tag)
+                applied_count += 1
+            except Exception as e:
+                logger.warning(f"Failed to apply tags to {target_actor}: {e}")
+                failed_count += 1
+                
+    return jsonify({
+        "status": "completed",
+        "objects_processed": len(objects),
+        "tags_applied_to_actors": applied_count,
+        "failures": failed_count
+    }), 200
+
+
 @app.route('/team_members', methods=['GET'])
 def team_members() -> tuple[Response, int]:
     """Return team members with their assigned tasks for avatar spawning.
@@ -1033,7 +1036,7 @@ if __name__ == '__main__':
     logger.info("=" * 50)
     logger.info("🌱 BloomPath Middleware Starting")
     logger.info("=" * 50)
-    logger.info(f"Jira Project: {JIRA_PROJECT_KEY}")
+    logger.info(f"Jira Projects: {JIRA_PROJECT_KEYS}")
     logger.info(f"UE5 Endpoint: {UE5_REMOTE_CONTROL_URL}")
     logger.info(f"Log Level: {LOG_LEVEL}")
     

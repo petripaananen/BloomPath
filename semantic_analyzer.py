@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-logger = logging.getLogger("BloomPath.SemanticAnalyzer")
+logger = logging.getLogger("BloomPath.Analysis.Semantic")
 
 # Gemini API Configuration
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
