@@ -1,35 +1,15 @@
-# ============================================================================
-# BloomPath - Docker Compose Configuration
-# ============================================================================
+version: '3.8'
 
 services:
-  bloompath:
+  bloompath-backend:
     build: .
-    container_name: bloompath-middleware
     ports:
       - "5000:5000"
+    # Inject environment variables from .env file
+    # Note: Ensure .env exists in the same directory
     env_file:
       - .env
-    environment:
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    # Mount content directory for persistence (generated worlds)
+    volumes:
+      - ./content:/app/content
     restart: unless-stopped
-    healthcheck:
-      test: [ "CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/health', timeout=5)" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-  # Optional: ngrok sidecar for development
-  # Uncomment to use ngrok in Docker
-  # ngrok:
-  #   image: ngrok/ngrok:latest
-  #   container_name: bloompath-ngrok
-  #   environment:
-  #     - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
-  #   command: http bloompath:5000
-  #   ports:
-  #     - "4040:4040"  # ngrok web interface
-  #   depends_on:
-  #     - bloompath
