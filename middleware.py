@@ -1,5 +1,6 @@
 import os
 import re
+import json
 import logging
 import time
 from datetime import datetime
@@ -12,6 +13,10 @@ from requests.auth import HTTPBasicAuth
 from functools import wraps
 
 load_dotenv()
+
+from world_client import WorldLabsClient
+from semantic_analyzer import analyze_world, save_manifest
+from validation_agent import run_validation
 
 # ============================================================================
 # Logging Configuration
@@ -486,6 +491,25 @@ def get_growth_params(issue: dict[str, Any]) -> tuple[str, float, dict[str, floa
     return growth_type, growth_modifier, color, epic_key
 
 
+def construct_sprint_prompt(issues: list[dict[str, Any]]) -> str:
+    """Analyze sprint issues to create a World Labs prompt."""
+    if not issues:
+        return "A peaceful serene garden, sunny day"
+        
+    bug_count = sum(1 for i in issues if i.get('fields', {}).get('issuetype', {}).get('name') == 'Bug')
+    story_count = len(issues) - bug_count
+    
+    # Base theme
+    prompt = "A 3D garden environment"
+    
+    if bug_count > story_count:
+        prompt += ", dark atmospheric, swampy, mysterious fog, overgrown ruins"
+    else:
+        prompt += ", futuristic sci-fi city park, neon lights, clean structures, sunny"
+        
+    return prompt
+
+
 def sync_initial_state() -> None:
     """Queries Jira for all 'Done' issues and triggers growth in UE5."""
     logger.info("Starting initial state synchronization...")
@@ -798,29 +822,164 @@ def sprint_status():
         weather = calculate_sprint_health(issues)
         progress = calculate_sprint_progress(sprint)
         
-        # Count stats for logging
-        done = sum(1 for i in issues if i.get('fields', {}).get('status', {}).get('name', '').lower() == 'done')
-        
-        logger.info(f"Sprint '{sprint['name']}': {weather} weather, {progress:.1%} progress ({done}/{len(issues)} done)")
-        
         return jsonify({
             "status": "ok",
             "sprint_name": sprint.get('name'),
-            "sprint_id": sprint.get('id'),
             "weather": weather,
-            "progress": round(progress, 3),
+            "progress": progress,
             "issues_total": len(issues),
-            "issues_done": done
+            "issues_done": sum(1 for i in issues if i.get('fields', {}).get('status', {}).get('name') == 'Done')
         }), 200
         
     except Exception as e:
         logger.error(f"Error getting sprint status: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/generate_sprint_world', methods=['POST'])
+def generate_sprint_world():
+    """Trigger World Labs generation based on current sprint."""
+    sprint = get_active_sprint()
+    if not sprint:
+        return jsonify({"status": "error", "message": "No active sprint"}), 404
+        
+    issues = get_sprint_issues(sprint['id'])
+    prompt = construct_sprint_prompt(issues)
+    
+    # Generate
+    client = WorldLabsClient()
+    filename = f"sprint_{sprint['id']}_world.gltf"
+    output_path = os.path.join(os.getcwd(), "content", "generated", filename)
+    
+    # Run in background (simplification for now - blocking call)
+    # Ideally should be a true background task
+    result_path = client.generate_world(prompt, output_path)
+    
+    if result_path:
+        global _latest_world_path
+        _latest_world_path = result_path
+        logger.info(f"🌍 World generated: {result_path}")
+        return jsonify({
+            "status": "success", 
+            "prompt": prompt,
+            "file": result_path
+        }), 200
+    else:
+        return jsonify({
+            "status": "failed",
+            "prompt": prompt
+        }), 500
+
+
+# Global to track latest generated world path
+_latest_world_path: Optional[str] = None
+
+
+@app.route('/latest_world', methods=['GET'])
+def latest_world() -> tuple[Response, int]:
+    """Return the path to the most recently generated world file.
+    
+    UE5 polls this endpoint to check for new world imports.
+    """
+    global _latest_world_path
+    
+    if _latest_world_path and os.path.exists(_latest_world_path):
+        return jsonify({
+            "status": "ok",
+            "file_path": _latest_world_path
+        }), 200
+    else:
+        return jsonify({
+            "status": "no_world",
+            "file_path": ""
+        }), 200
+
+
+# Global to track latest manifest path
+_latest_manifest_path: Optional[str] = None
+
+
+@app.route('/analyze_world', methods=['POST'])
+def analyze_world_endpoint() -> tuple[Response, int]:
+    """Analyze a World Labs render using Gemini vision.
+    
+    Request body: {"image_path": "/path/to/thumbnail.png"}
+    Or uses latest world's thumbnail if no path provided.
+    """
+    global _latest_manifest_path
+    
+    data = request.json or {}
+    image_path = data.get('image_path')
+    
+    # If no image provided, try to use latest world thumbnail
+    if not image_path:
+        # World Labs returns thumbnail_url in assets
         return jsonify({
             "status": "error",
-            "weather": "cloudy",  # Default to cloudy on error
-            "progress": 0.5,
-            "message": str(e)
+            "message": "image_path required"
+        }), 400
+    
+    # Run analysis
+    manifest = analyze_world(image_path)
+    
+    if not manifest:
+        return jsonify({
+            "status": "failed",
+            "message": "Analysis failed"
         }), 500
+    
+    # Save manifest alongside the image
+    manifest_path = image_path.rsplit('.', 1)[0] + '_manifest.json'
+    save_manifest(manifest, manifest_path)
+    _latest_manifest_path = manifest_path
+    
+    return jsonify({
+        "status": "success",
+        "manifest_path": manifest_path,
+        "object_count": len(manifest.get('objects', [])),
+        "scene_description": manifest.get('scene_description', '')
+    }), 200
+
+
+@app.route('/latest_manifest', methods=['GET'])
+def latest_manifest() -> tuple[Response, int]:
+    """Return the latest world manifest for UE5."""
+    global _latest_manifest_path
+    
+    if _latest_manifest_path and os.path.exists(_latest_manifest_path):
+        with open(_latest_manifest_path, 'r') as f:
+            manifest = json.load(f)
+        return jsonify({
+            "status": "ok",
+            "manifest": manifest
+        }), 200
+    else:
+        return jsonify({
+            "status": "no_manifest",
+            "manifest": None
+        }), 200
+
+
+@app.route('/validate_world', methods=['POST'])
+def validate_world_endpoint() -> tuple[Response, int]:
+    """Run validation on the latest manifest and optionally report to Jira.
+    
+    Request body: {"jira_issue_key": "BLP-123"} (optional)
+    """
+    global _latest_manifest_path
+    
+    if not _latest_manifest_path or not os.path.exists(_latest_manifest_path):
+        return jsonify({
+            "status": "error",
+            "message": "No manifest available - run /analyze_world first"
+        }), 404
+    
+    data = request.json or {}
+    jira_key = data.get('jira_issue_key')
+    
+    result = run_validation(_latest_manifest_path, jira_key)
+    
+    return jsonify(result), 200
 
 
 @app.route('/team_members', methods=['GET'])
