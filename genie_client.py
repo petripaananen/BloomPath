@@ -29,13 +29,14 @@ class GenieClient:
             logger.error(f"Failed to encode image {image_path}: {e}")
             return None
 
-    def simulate_gameplay(self, image_path: str, mechanics: str) -> Dict[str, Any]:
+    def simulate_gameplay(self, image_path: str, mechanics: str, simulation_profile: str = "baseline") -> Dict[str, Any]:
         """
         Simulate gameplay on the provided world image.
         
         Args:
             image_path: Path to the render of the world.
             mechanics: Description of the gameplay mechanics (e.g., "Jump, simple physics").
+            simulation_profile: "baseline", "stress_test", or "optimization".
             
         Returns:
             Dictionary containing simulation results (status, description, hazards).
@@ -47,12 +48,24 @@ class GenieClient:
         if not encoded_image:
             return {"status": "failed", "reason": "Image encoding failed"}
 
+        # Define profile-specific instructions
+        profile_instructions = ""
+        if simulation_profile == "stress_test":
+            profile_instructions = "FOCUS: Aggressive edge-case testing. Try to break physics, find slip-throughs in geometry, and test high-velocity collisions."
+        elif simulation_profile == "optimization":
+            profile_instructions = "FOCUS: Efficiency check. Identify overly complex geometry that serves no gameplay purpose."
+        else:
+            profile_instructions = "FOCUS: Standard gameplay validation. Ensure mechanics work as intended."
+
         # Construct the Genie 3 prompt
         # We ask the model to simulate the interaction and report back the analysis.
         prompt = f"""
         You are Genie 3, an advanced world model simulator.
         
         Task: Simulate a player interacting with this 3D environment based on these mechanics: "{mechanics}".
+        Profile: {simulation_profile.upper()}
+        {profile_instructions}
+
         Run 3 distinct simulation paths (e.g., Path A: Walk straight, Path B: Jump on obstacles, Path C: Interact with boundaries).
         
         Analyze the resulting gameplay for:
@@ -62,7 +75,7 @@ class GenieClient:
         
         Return a JSON object with this structure:
         {{
-          "simulation_id": "gen_001",
+          "simulation_id": "{simulation_profile}_path",
           "paths_simulated": 3,
           "success_rate": 0.0 to 1.0,
           "issues": [

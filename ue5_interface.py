@@ -218,6 +218,32 @@ def trigger_ue5_play_sound_2d(
     logger.info(f"🔊 Playing sound: {sound_name}")
     return _send_request(payload)
 
+UE5_PHANTOM_FUNCTION = os.getenv("UE5_PHANTOM_FUNCTION", "Spawn_Phantom_Hazard")
+
+@retry_on_failure()
+def trigger_phantom_warning(
+    location_name: str,
+    risk_level: float = 0.5
+) -> dict[str, Any]:
+    """
+    Calls UE5 to spawn a 'Ghost Object' representing a predicted future failure (Latent Risk).
+    
+    Args:
+        location_name: Name of the location/actor to spawn near (e.g. 'Location_Center').
+        risk_level: 0.0 to 1.0 (Higher = Redder/More opaque).
+    """
+    payload = {
+        "objectPath": UE5_ACTOR_PATH,
+        "functionName": UE5_PHANTOM_FUNCTION,
+        "parameters": {
+            "Location_Name": location_name,
+            "Risk_Opacity": max(0.1, min(1.0, risk_level)) # Clamp 0.1-1.0
+        },
+        "generateTransaction": True
+    }
+    logger.info(f"👻 Spawning Latent Risk Phantom at {location_name} (Risk: {risk_level:.2f})")
+    return _send_request(payload)
+
 def map_semantic_type_to_actor(semantic_type: str) -> Optional[str]:
     """
     Maps a semantic type (e.g., 'path', 'ground') to a UE5 Actor name.
