@@ -41,7 +41,7 @@ BloomPath isn't just a display; it's a bridge:
 
 ## � Research Context
 
-BloomPath is developed as a practical manifestation of the research themes being explored in the ongoing Master’s Thesis: **"Emergent Workflows in the Video Game Industry: Leveraging AI World Models as a Framework for Production Management"** (projected completion: Spring 2026).
+BloomPath is a practical PoC (Proof-of-Concept) manifestation of the research conducted in the Master's Thesis: **"Emergent Workflows in the Video Game Industry: Leveraging AI World Models as a Framework for Production Management"** (projected completion: Spring 2026).
 
 The project serves as a **Project World Model (PWM)** prototype, exploring how real-time production data (e.g., Jira, Git) can be transformed into a spatial, agent-driven ecosystem to manage complexity in modern game development.
 
