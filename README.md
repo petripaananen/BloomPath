@@ -2,8 +2,6 @@
 
 **BloomPath** is a sophisticated **Digital Twin of Organization (DTO)** that transforms abstract project management data into a living, breathing 3D ecosystem. By synchronizing **Jira** workflows with **Unreal Engine 5**, it creates a "Garden of Productivity" where project health is visualized through organic growth and environmental dynamics.
 
-Developed as a proof-of-concept manifestation of the research themes being explored in the ongoing Master’s Thesis: **"Emergent Workflows in the Video Game Industry: Leveraging AI World Models as a Framework for Production Management"** (projected completion: Spring 2026), BloomPath pushes the boundaries of data visualization by moving beyond 2D dashboards into immersive, interactive, and AI-validated spatial environments.
-
 ---
 
 ## 🚀 Key Innovation: The PWM Pipeline (v2.0)
@@ -41,7 +39,15 @@ BloomPath isn't just a display; it's a bridge:
 
 ---
 
-## 🛠️ Technology Stack
+## � Research Context
+
+BloomPath is developed as a practical manifestation of the research themes being explored in the ongoing Master’s Thesis: **"Emergent Workflows in the Video Game Industry: Leveraging AI World Models as a Framework for Production Management"** (projected completion: Spring 2026).
+
+The project serves as a **Project World Model (PWM)** prototype, exploring how real-time production data (e.g., Jira, Git) can be transformed into a spatial, agent-driven ecosystem to manage complexity in modern game development.
+
+---
+
+## �🛠️ Technology Stack
 
 *   **Engine**: Unreal Engine 5.5+ (Remote Control API, Niagara)
 *   **Middleware**: Python (Flask, Requests, Threading)
