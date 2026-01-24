@@ -5,3 +5,6 @@ __pycache__/
 venv/
 *.log
 .DS_Store
+
+# Documentation to keep local only
+docs/Thesis_context.md
