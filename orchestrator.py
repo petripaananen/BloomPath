@@ -5,14 +5,13 @@ import json
 import os
 from typing import Dict, Any, Optional
 
+import concurrent.futures
+
 from world_client import WorldLabsClient
 from genie_client import GenieClient
 import semantic_analyzer
-import middleware
 
 logger = logging.getLogger("BloomPath.Orchestrator")
-
-import concurrent.futures
 
 class BloomPathOrchestrator:
     """
@@ -84,9 +83,12 @@ class BloomPathOrchestrator:
             mesh_path = generation_result.get('mesh_path')
             image_path = generation_result.get('image_path')
             
+            # Initialize confidence_score to 100 (assume success if no simulation runs)
+            confidence_score = 100.0
+            
             if not image_path:
                 logger.warning("  > No thumbnail image. Skipping 'Dreaming' phase.")
-                pass 
+                # confidence_score remains 100.0 (no simulation = no detected issues)
             else:
                 # 2. Parallel Simulation (AsyncThink) - The Dreaming
                 logger.info("  > Dispatching 3 Parallel Simulation Agents (The Dreaming)...")
@@ -183,7 +185,7 @@ class BloomPathOrchestrator:
         status_icon = "🟢" if confidence >= 80 else "🟡" if confidence >= 50 else "🔴"
         
         content = f"""# PWM Scenario Strategy Report: {issue_key}
-        
+
 **Date**: {time.strftime('%Y-%m-%d %H:%M:%S')}
 **Intent**: "{prompt}"
 **Overall Confidence**: {status_icon} {confidence:.1f}%
@@ -217,7 +219,7 @@ Analysis of {len(results)} parallel futures:
         else:
             content += "🛑 **BLOCK**: High probability of failure. Refinement loop triggered automatically."
             
-        with open(path, "w") as f:
+        with open(path, "w", encoding='utf-8') as f:
             f.write(content)
         
         logger.info(f"📄 Scenario Report generated: {path}")

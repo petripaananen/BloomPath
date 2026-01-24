@@ -4,6 +4,7 @@ import time
 import json
 import logging
 import base64
+import mimetypes
 import requests
 from typing import Optional, Dict, Any, List
 
@@ -86,13 +87,18 @@ class GenieClient:
         }}
         """
         
+        # Infer MIME type from file extension
+        mime_type, _ = mimetypes.guess_type(image_path)
+        if not mime_type:
+            mime_type = "image/png"  # Fallback
+        
         payload = {
             "contents": [{
                 "parts": [
                     {"text": prompt},
                     {
                         "inline_data": {
-                            "mime_type": "image/png", # Assuming PNG, logic can be improved
+                            "mime_type": mime_type,
                             "data": encoded_image
                         }
                     }
