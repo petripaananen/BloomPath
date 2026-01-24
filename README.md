@@ -2,7 +2,7 @@
 
 **BloomPath** is a sophisticated **Digital Twin of Organization (DTO)** that transforms abstract project management data into a living, breathing 3D ecosystem. By synchronizing **Jira** workflows with **Unreal Engine 5**, it creates a "Garden of Productivity" where project health is visualized through organic growth and environmental dynamics.
 
-Developed as a Master's Thesis project, BloomPath pushes the boundaries of data visualization by moving beyond 2D dashboards into immersive, interactive, and AI-validated spatial environments.
+Developed as a proof-of-concept manifestation of the research themes explored in the Master’s Thesis: **"Emergent Workflows in the Video Game Industry: Leveraging AI World Models as a Framework for Production Management"**, BloomPath pushes the boundaries of data visualization by moving beyond 2D dashboards into immersive, interactive, and AI-validated spatial environments.
 
 ---
 
