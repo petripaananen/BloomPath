@@ -23,6 +23,18 @@ class BloomPathOrchestrator:
         self.world_client = WorldLabsClient()
         self.genie_client = GenieClient()
         self.max_retries = 3
+        self.mechanics_map = self._load_mechanics_config()
+
+    def _load_mechanics_config(self) -> Dict[str, str]:
+        """Load mechanics mapping from JSON config."""
+        try:
+            config_path = os.path.join(os.getcwd(), "config", "mechanics.json")
+            if os.path.exists(config_path):
+                with open(config_path, 'r') as f:
+                    return json.load(f)
+        except Exception as e:
+            logger.warning(f"Failed to load mechanics config: {e}")
+        return {}
 
     def parse_intent(self, ticket: Any) -> Dict[str, Any]:
         """Extracts generation prompt and mechanics from UnifiedTicket."""
@@ -34,25 +46,19 @@ class BloomPathOrchestrator:
         prompt = f"A 3D game level: {summary}"
         
         # Determine mechanics based on labels or keywords
-        mechanics = "Standard movement, jump, walk"
+        mechanics_list = ["Standard movement, jump, walk"]
         
         # Helper to check labels case-insensitively
         label_set = {str(l).lower() for l in labels}
         
-        if "platformer" in label_set:
-            mechanics += ", double jump, floating platforms, wall run"
-        if "vehicle" in label_set:
-            mechanics += ", driving physics, ramp interaction, vehicle collision"
-        if "puzzle" in label_set:
-            mechanics += ", button interaction, door logic, carrying objects"
-        if "shooter" in label_set:
-            mechanics += ", aiming, projectile physics, enemy AI"
-        if "survival" in label_set:
-            mechanics += ", resource gathering, health management"
+        # Iterate through loaded mechanics map
+        for key, value in self.mechanics_map.items():
+            if key in label_set:
+                mechanics_list.append(value)
             
         return {
             "prompt": prompt,
-            "mechanics": mechanics,
+            "mechanics": ", ".join(mechanics_list),
             "issue_key": getattr(ticket, 'id', 'UNKNOWN')
         }
 

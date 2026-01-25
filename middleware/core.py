@@ -112,15 +112,23 @@ def process_ticket_event(
             
             # Initialize Dreaming Engine for new Features/Epics
             if ticket.issue_type in [IssueType.FEATURE, IssueType.EPIC]:
-                logger.info(f"✨ Triggering L3 Dreaming Engine for {ticket.id}...")
-                try:
-                    from orchestrator import BloomPathOrchestrator
-                    orchestrator = BloomPathOrchestrator()
-                    orchestrator.process_ticket(ticket)
-                except Exception as ex:
-                    logger.error(f"Dreaming Engine failed: {ex}")
+                logger.info(f"✨ Triggering L3 Dreaming Engine for {ticket.id} (Async)...")
+                
+                def _run_dreaming_engine(ticket_data):
+                    try:
+                        # Re-import inside thread if needed, or rely on module level
+                        from orchestrator import BloomPathOrchestrator
+                        orchestrator = BloomPathOrchestrator()
+                        orchestrator.process_ticket(ticket_data)
+                    except Exception as ex:
+                        logger.error(f"Dreaming Engine failed: {ex}")
 
-            return {"status": "received", "action": "dreaming_triggered", "issue": ticket.id}
+                import threading
+                thread = threading.Thread(target=_run_dreaming_engine, args=(ticket,))
+                thread.daemon = False  # Let it finish even if main thread idles (though Flask keeps running)
+                thread.start()
+
+            return {"status": "received", "action": "dreaming_triggered_async", "issue": ticket.id}
         
         else:
             # General update

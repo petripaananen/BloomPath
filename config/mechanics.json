@@ -1,0 +1,7 @@
+{
+    "platformer": "double jump, floating platforms, wall run",
+    "vehicle": "driving physics, ramp interaction, vehicle collision",
+    "puzzle": "button interaction, door logic, carrying objects",
+    "shooter": "aiming, projectile physics, enemy AI",
+    "survival": "resource gathering, health management"
+}
