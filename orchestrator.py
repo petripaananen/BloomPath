@@ -24,41 +24,45 @@ class BloomPathOrchestrator:
         self.genie_client = GenieClient()
         self.max_retries = 3
 
-    def parse_intent(self, issue_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Extracts generation prompt and mechanics from Jira issue."""
-        fields = issue_data.get('fields', {})
-        summary = fields.get('summary', '')
+    def parse_intent(self, ticket: Any) -> Dict[str, Any]:
+        """Extracts generation prompt and mechanics from UnifiedTicket."""
+        # Use loose typing 'Any' to avoid circular imports but expect UnifiedTicket
+        summary = getattr(ticket, 'title', '')
+        labels = getattr(ticket, 'labels', [])
         
         # Construct primitive prompt from summary
         prompt = f"A 3D game level: {summary}"
         
         # Determine mechanics based on labels or keywords
         mechanics = "Standard movement, jump, walk"
-        labels = fields.get('labels', [])
-        if "platformer" in labels:
+        
+        # Helper to check labels case-insensitively
+        label_set = {str(l).lower() for l in labels}
+        
+        if "platformer" in label_set:
             mechanics += ", double jump, floating platforms, wall run"
-        if "vehicle" in labels:
+        if "vehicle" in label_set:
             mechanics += ", driving physics, ramp interaction, vehicle collision"
-        if "puzzle" in labels:
+        if "puzzle" in label_set:
             mechanics += ", button interaction, door logic, carrying objects"
-        if "shooter" in labels:
+        if "shooter" in label_set:
             mechanics += ", aiming, projectile physics, enemy AI"
-        if "survival" in labels:
+        if "survival" in label_set:
             mechanics += ", resource gathering, health management"
             
         return {
             "prompt": prompt,
             "mechanics": mechanics,
-            "issue_key": issue_data.get('key')
+            "issue_key": getattr(ticket, 'id', 'UNKNOWN')
         }
 
-    def process_ticket(self, issue_data: Dict[str, Any]) -> Dict[str, Any]:
+    def process_ticket(self, ticket: Any) -> Dict[str, Any]:
         """
-        Main entry point: Process a Jira ticket through the pipeline.
+        Main entry point: Process a UnifiedTicket through the pipeline.
         This now acts as an "Organizer Agent", dispatching work to parallel sub-agents.
         """
         start_time = time.time()
-        intent = self.parse_intent(issue_data)
+        intent = self.parse_intent(ticket)
         issue_key = intent['issue_key']
         
         logger.info(f"🎹 Orchestrator (Agentic Mode) for {issue_key}: {intent['prompt']}")

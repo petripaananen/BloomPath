@@ -96,6 +96,8 @@ class LinearProvider(IssueProvider):
                 headers=self._headers,
                 timeout=30
             )
+            if response.status_code != 200:
+                logger.error(f"Linear API Error: {response.text}")
             response.raise_for_status()
             result = response.json()
             
@@ -138,40 +140,26 @@ class LinearProvider(IssueProvider):
         """Extract relations from Linear issue data."""
         relations: List[Relation] = []
         
-        # Blocked by relations
-        blocked_by = issue_data.get("blockedBy", {}).get("nodes", [])
-        for blocker in blocked_by:
-            relations.append(Relation(
-                target_id=blocker.get("identifier", blocker.get("id")),
-                relation_type=RelationType.BLOCKED_BY,
-                target_provider="linear"
-            ))
+        # Unified relations field
+        related_nodes = issue_data.get("relations", {}).get("nodes", [])
         
-        # Blocking relations
-        blocking = issue_data.get("blocking", {}).get("nodes", [])
-        for blocked in blocking:
-            relations.append(Relation(
-                target_id=blocked.get("identifier", blocked.get("id")),
-                relation_type=RelationType.BLOCKS,
-                target_provider="linear"
-            ))
-        
-        # Related issues
-        related = issue_data.get("relations", {}).get("nodes", [])
-        for rel in related:
+        for rel in related_nodes:
+            rel_type = rel.get("type", "").lower()
             related_issue = rel.get("relatedIssue", {})
+            target_id = related_issue.get("identifier", related_issue.get("id"))
+            
+            if not target_id:
+                continue
+                
+            internal_type = RelationType.RELATES_TO
+            if rel_type == "blocks":
+                internal_type = RelationType.BLOCKS
+            elif rel_type == "blockedby":  # Note: Linear might return 'blockedBy' or 'blocked_by' or 'blocks' inverse
+                internal_type = RelationType.BLOCKED_BY
+            
             relations.append(Relation(
-                target_id=related_issue.get("identifier", related_issue.get("id")),
-                relation_type=RelationType.RELATES_TO,
-                target_provider="linear"
-            ))
-        
-        # Children (sub-issues)
-        children = issue_data.get("children", {}).get("nodes", [])
-        for child in children:
-            relations.append(Relation(
-                target_id=child.get("identifier", child.get("id")),
-                relation_type=RelationType.CHILD,
+                target_id=target_id,
+                relation_type=internal_type,
                 target_provider="linear"
             ))
         
@@ -237,7 +225,7 @@ class LinearProvider(IssueProvider):
         """Fetch a single issue from Linear by identifier."""
         query = """
         query GetIssue($identifier: String!) {
-            issue(identifier: $identifier) {
+            issue(id: $identifier) {
                 id
                 identifier
                 title
@@ -249,9 +237,12 @@ class LinearProvider(IssueProvider):
                 project { id name }
                 cycle { id name }
                 labels { nodes { id name } }
-                blockedBy { nodes { id identifier } }
-                blocking { nodes { id identifier } }
-                relations { nodes { relatedIssue { id identifier } } }
+                relations { 
+                    nodes { 
+                        type
+                        relatedIssue { id identifier } 
+                    } 
+                }
                 children { nodes { id identifier } }
                 createdAt
                 updatedAt
@@ -308,8 +299,12 @@ class LinearProvider(IssueProvider):
                         parent { id identifier }
                         project { id name }
                         labels { nodes { id name } }
-                        blockedBy { nodes { id identifier } }
-                        blocking { nodes { id identifier } }
+                        relations { 
+                            nodes { 
+                                type
+                                relatedIssue { id identifier } 
+                            } 
+                        }
                         createdAt
                         updatedAt
                     }

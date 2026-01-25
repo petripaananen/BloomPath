@@ -107,9 +107,20 @@ def process_ticket_event(
             
             return {"status": "thorns_removed", "issue": ticket.id}
         
-        elif event_type == 'created':
-            # New issue -> Could spawn seed/bud
-            return {"status": "received", "issue": ticket.id}
+        elif event_type == 'created' or (event_type == 'updated' and growth_type == 'feature'):
+            # New issue -> Could spawn seed/bud AND trigger Dreaming Engine
+            
+            # Initialize Dreaming Engine for new Features/Epics
+            if ticket.issue_type in [IssueType.FEATURE, IssueType.EPIC]:
+                logger.info(f"✨ Triggering L3 Dreaming Engine for {ticket.id}...")
+                try:
+                    from orchestrator import BloomPathOrchestrator
+                    orchestrator = BloomPathOrchestrator()
+                    orchestrator.process_ticket(ticket)
+                except Exception as ex:
+                    logger.error(f"Dreaming Engine failed: {ex}")
+
+            return {"status": "received", "action": "dreaming_triggered", "issue": ticket.id}
         
         else:
             # General update
