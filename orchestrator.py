@@ -172,6 +172,15 @@ class BloomPathOrchestrator:
                 semantic_analyzer.save_manifest(manifest, manifest_path)
                 self._inject_tags_into_ue5(manifest)
             
+            # 6. Trigger Physical Load in UE5
+            if mesh_path and os.path.exists(mesh_path):
+                logger.info("  > Commanding UE5 to load the generated world...")
+                try:
+                    from ue5_interface import trigger_ue5_load_level
+                    trigger_ue5_load_level(mesh_path)
+                except Exception as e:
+                    logger.error(f"Failed to trigger UE5 load: {e}")
+            
             elapsed = time.time() - start_time
             return {
                 "status": "success",

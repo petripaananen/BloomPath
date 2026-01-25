@@ -9,8 +9,8 @@ from functools import wraps
 logger = logging.getLogger("BloomPath.UE5Interface")
 
 # Configuration
-UE5_REMOTE_CONTROL_URL = os.getenv("UE5_REMOTE_CONTROL_URL", "http://localhost:8080/remote/object/call")
-UE5_ACTOR_PATH = os.getenv("UE5_ACTOR_PATH", "/Game/Maps/Main.Main:PersistentLevel.GrowerActor")
+UE5_REMOTE_CONTROL_URL = os.getenv("UE5_REMOTE_CONTROL_URL", "http://localhost:30010/remote/object/call")
+UE5_ACTOR_PATH = os.getenv("UE5_ACTOR_PATH", "/Game/Garden.Garden:PersistentLevel.BP_GrowerActor_C_UAID_E89C257B5B95AEB802_2047448423")
 
 # Function Names
 UE5_GROW_FUNCTION = os.getenv("UE5_GROW_FUNCTION", "Grow_Leaves")
@@ -242,6 +242,28 @@ def trigger_phantom_warning(
         "generateTransaction": True
     }
     logger.info(f"👻 Spawning Latent Risk Phantom at {location_name} (Risk: {risk_level:.2f})")
+    logger.info(f"👻 Spawning Latent Risk Phantom at {location_name} (Risk: {risk_level:.2f})")
+    return _send_request(payload)
+
+UE5_LOAD_LEVEL_FUNCTION = os.getenv("UE5_LOAD_LEVEL_FUNCTION", "Load_Generated_Level")
+
+@retry_on_failure()
+def trigger_ue5_load_level(file_path: str) -> dict[str, Any]:
+    """
+    Calls UE5 to load a generated GLTF/GLB level.
+    
+    Args:
+        file_path: Absolute path to the .gltf file.
+    """
+    payload = {
+        "objectPath": UE5_ACTOR_PATH,
+        "functionName": UE5_LOAD_LEVEL_FUNCTION,
+        "parameters": {
+            "File_Path": file_path
+        },
+        "generateTransaction": True
+    }
+    logger.info(f"🏗️ Triggering UE5 Level Load: {file_path}")
     return _send_request(payload)
 
 def map_semantic_type_to_actor(semantic_type: str) -> Optional[str]:
