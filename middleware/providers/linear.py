@@ -167,7 +167,8 @@ class LinearProvider(IssueProvider):
     
     def _issue_to_ticket(self, issue: Dict[str, Any]) -> UnifiedTicket:
         """Convert a Linear issue to UnifiedTicket."""
-        labels = issue.get("labels", {}).get("nodes", [])
+        labels_data = issue.get("labels", {}) or {}
+        labels = labels_data.get("nodes", [])
         state = issue.get("state", {})
         assignee = issue.get("assignee") or {}
         cycle = issue.get("cycle") or {}

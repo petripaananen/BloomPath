@@ -71,7 +71,7 @@ def process_ticket_event(
         if event_type == 'completed':
             # Issue completed -> Grow plant
             trigger_ue5_growth(
-                issue_key=ticket.id,
+                branch_id=ticket.id,
                 growth_type=growth_type,
                 growth_modifier=growth_modifier,
                 epic_key=ticket.parent_id
@@ -107,7 +107,7 @@ def process_ticket_event(
             
             return {"status": "thorns_removed", "issue": ticket.id}
         
-        elif event_type == 'created' or (event_type == 'updated' and growth_type == 'feature'):
+        elif event_type == 'created' or (event_type == 'updated' and growth_type in ['branch', 'trunk']):
             # New issue -> Could spawn seed/bud AND trigger Dreaming Engine
             
             # Initialize Dreaming Engine for ALL issues (Demo Mode)

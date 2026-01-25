@@ -6,6 +6,7 @@ project state and trigger actions.
 """
 
 import logging
+import os
 from flask import Blueprint, request, jsonify
 
 from middleware.providers.jira import JiraProvider
@@ -19,7 +20,10 @@ api_bp = Blueprint('api', __name__)
 
 def _get_provider(provider_name: str = None):
     """Get the appropriate provider based on name or config."""
-    if provider_name == 'linear':
+    if not provider_name:
+        provider_name = os.getenv('DEFAULT_PROVIDER', 'jira')
+        
+    if provider_name and provider_name.strip().lower() == 'linear':
         return LinearProvider()
     return JiraProvider()  # Default to Jira
 
@@ -52,7 +56,7 @@ def sprint_status():
     Query params:
     - provider: 'jira' or 'linear' (default: jira)
     """
-    provider_name = request.args.get('provider', 'jira')
+    provider_name = request.args.get('provider')
     provider = _get_provider(provider_name)
     
     try:
@@ -165,7 +169,7 @@ def team_members():
     Query params:
     - provider: 'jira' or 'linear' (default: jira)
     """
-    provider_name = request.args.get('provider', 'jira')
+    provider_name = request.args.get('provider')
     provider = _get_provider(provider_name)
     
     try:
@@ -213,7 +217,7 @@ def get_dependencies(issue_id: str):
     
     Used by UE5 to draw vines between plants.
     """
-    provider_name = request.args.get('provider', 'jira')
+    provider_name = request.args.get('provider')
     provider = _get_provider(provider_name)
     
     try:
