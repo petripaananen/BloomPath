@@ -160,6 +160,10 @@ def _detect_linear_event(data: dict) -> dict:
             return {'event_type': 'completed'}
         elif state_type == 'canceled':
             return {'event_type': 'completed'}  # Treat as done
+        elif state_type in ['unstarted', 'started', 'triage']:
+            # If current state is unstarted/started and it was a state change, 
+            # we treat it as a reopen/shrink event.
+            return {'event_type': 'reopened'}
     
     # Check for blocking changes
     if 'blockedBy' in updated_from or 'blocking' in updated_from:
