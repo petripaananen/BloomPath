@@ -269,7 +269,149 @@ def map_semantic_type_to_actor(semantic_type: str) -> Optional[str]:
          
     return None
 
+
+# Vine Visualization Configuration
+UE5_SPAWN_VINE_FUNCTION = os.getenv("UE5_SPAWN_VINE_FUNCTION", "Spawn_Dependency_Vine")
+UE5_REMOVE_VINE_FUNCTION = os.getenv("UE5_REMOVE_VINE_FUNCTION", "Remove_Dependency_Vine")
+
+# Vine appearance based on relation type
+VINE_STYLES = {
+    "blocked_by": {
+        "color": {"R": 0.8, "G": 0.1, "B": 0.1},  # Red thorny vine
+        "thickness": 0.15,
+        "has_thorns": True,
+        "animation": "pulse_warning"
+    },
+    "blocks": {
+        "color": {"R": 0.8, "G": 0.4, "B": 0.1},  # Orange warning vine
+        "thickness": 0.12,
+        "has_thorns": True,
+        "animation": "pulse_slow"
+    },
+    "relates_to": {
+        "color": {"R": 0.3, "G": 0.7, "B": 0.3},  # Green connection vine
+        "thickness": 0.08,
+        "has_thorns": False,
+        "animation": "none"
+    },
+    "parent": {
+        "color": {"R": 0.4, "G": 0.3, "B": 0.2},  # Brown trunk-like
+        "thickness": 0.2,
+        "has_thorns": False,
+        "animation": "none"
+    },
+    "child": {
+        "color": {"R": 0.5, "G": 0.8, "B": 0.5},  # Light green
+        "thickness": 0.06,
+        "has_thorns": False,
+        "animation": "none"
+    }
+}
+
+
+@retry_on_failure()
+def trigger_ue5_dependency_vine(
+    from_id: str,
+    to_id: str,
+    relation_type: str = "relates_to"
+) -> dict:
+    """
+    Spawn a vine mesh connecting two plants to visualize dependencies.
+    
+    Args:
+        from_id: Source issue ID (e.g., "KAN-123")
+        to_id: Target issue ID (e.g., "KAN-456")
+        relation_type: Type of relation (blocked_by, blocks, relates_to, parent, child)
+        
+    Returns:
+        Response from UE5
+    """
+    style = VINE_STYLES.get(relation_type, VINE_STYLES["relates_to"])
+    
+    # Create a unique identifier for this vine
+    vine_id = f"vine_{from_id}_{to_id}_{relation_type}"
+    
+    payload = {
+        "objectPath": UE5_ACTOR_PATH,
+        "functionName": UE5_SPAWN_VINE_FUNCTION,
+        "parameters": {
+            "Vine_ID": vine_id,
+            "From_Issue_Key": from_id,
+            "To_Issue_Key": to_id,
+            "Relation_Type": relation_type,
+            "Vine_Color": style["color"],
+            "Vine_Thickness": style["thickness"],
+            "Has_Thorns": style["has_thorns"],
+            "Animation_Style": style["animation"]
+        },
+        "generateTransaction": True
+    }
+    
+    # Log with appropriate emoji based on relation type
+    emoji = "🔗" if relation_type == "relates_to" else "🔴" if "block" in relation_type else "🌿"
+    logger.info(f"{emoji} Spawning {relation_type} vine: {from_id} → {to_id}")
+    
+    return _send_request(payload)
+
+
+@retry_on_failure()
+def trigger_ue5_remove_vine(
+    from_id: str,
+    to_id: str,
+    relation_type: str = "relates_to"
+) -> dict:
+    """
+    Remove a dependency vine between two plants.
+    
+    Args:
+        from_id: Source issue ID
+        to_id: Target issue ID
+        relation_type: Type of relation
+        
+    Returns:
+        Response from UE5
+    """
+    vine_id = f"vine_{from_id}_{to_id}_{relation_type}"
+    
+    payload = {
+        "objectPath": UE5_ACTOR_PATH,
+        "functionName": UE5_REMOVE_VINE_FUNCTION,
+        "parameters": {
+            "Vine_ID": vine_id
+        },
+        "generateTransaction": True
+    }
+    
+    logger.info(f"✂️ Removing vine: {from_id} → {to_id}")
+    return _send_request(payload)
+
+
+@retry_on_failure()
+def trigger_ue5_sync_all_vines(dependencies: list[dict]) -> dict:
+    """
+    Sync all dependency vines at once (for initial state sync).
+    
+    Args:
+        dependencies: List of dicts with from_id, to_id, relation_type
+        
+    Returns:
+        Response from UE5
+    """
+    payload = {
+        "objectPath": UE5_ACTOR_PATH,
+        "functionName": "Sync_All_Vines",
+        "parameters": {
+            "Dependencies": dependencies
+        },
+        "generateTransaction": True
+    }
+    
+    logger.info(f"🔄 Syncing {len(dependencies)} dependency vines")
+    return _send_request(payload)
+
+
 def _send_request(payload: dict) -> dict:
     response = requests.put(UE5_REMOTE_CONTROL_URL, json=payload, timeout=5)
     response.raise_for_status()
     return response.json()
+
