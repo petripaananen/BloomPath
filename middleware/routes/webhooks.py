@@ -61,6 +61,9 @@ def linear_webhook():
         logger.warning("Received Linear webhook with no JSON payload")
         return jsonify({"status": "error", "message": "No JSON payload"}), 400
     
+    # DEBUG: Log everything
+    logger.info(f"📨 WE GOT MAIL! Action: {data.get('action')} | Type: {data.get('type')}")
+    
     # Verify signature
     signature = request.headers.get('X-Linear-Signature', '')
     provider = LinearProvider()

@@ -110,8 +110,9 @@ def process_ticket_event(
         elif event_type == 'created' or (event_type == 'updated' and growth_type == 'feature'):
             # New issue -> Could spawn seed/bud AND trigger Dreaming Engine
             
-            # Initialize Dreaming Engine for new Features/Epics
-            if ticket.issue_type in [IssueType.FEATURE, IssueType.EPIC]:
+            # Initialize Dreaming Engine for ALL issues (Demo Mode)
+            # if ticket.issue_type in [IssueType.FEATURE, IssueType.EPIC]:
+            if True: # DEMO MODE: Allow any ticket to trigger dreaming
                 logger.info(f"✨ Triggering L3 Dreaming Engine for {ticket.id} (Async)...")
                 
                 def _run_dreaming_engine(ticket_data):
