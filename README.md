@@ -43,5 +43,5 @@ A truly interactive DTO, not just a dashboard:
 
 ### 🛠️ Technical Stack
 - **Engine**: Unreal Engine 5.7.2 (Remote Control API, Niagara)
-- **Intelligence**: Google Gemini (Vision), Google Genie 3 (World Simulation)
+- **Intelligence**: Google Gemini (Vision), Google Genie 3 (World Simulation), World Labs API (Marble AI)
 - **Infrastructure**: Python Middleware, Jira Cloud API, Docker.
