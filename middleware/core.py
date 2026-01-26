@@ -51,6 +51,23 @@ def process_ticket_event(
     event_type = event_info.get('event_type', 'updated')
     
     logger.info(f"🎫 Processing {ticket.id} ({ticket.provider}): {event_type}")
+
+    # Social Layer: Manage Avatars
+    try:
+        from middleware.avatar_manager import avatar_manager
+        
+        if ticket.assignee_id and ticket.assignee_name:
+            avatar_manager.register_user(
+                user_id=ticket.assignee_id,
+                name=ticket.assignee_name,
+                avatar_url=ticket.assignee_avatar,
+                provider=ticket.provider
+            )
+            # Move avatar to this ticket if they are the assignee and interacting with it
+            avatar_manager.update_user_location(ticket.assignee_id, ticket.id)
+            
+    except Exception as e:
+        logger.warning(f"Avatar update failed: {e}")
     
     # Import UE5 interface here to avoid circular imports
     try:

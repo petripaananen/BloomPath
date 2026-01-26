@@ -318,3 +318,33 @@ if actor:
     print(f"Synced {{count}} vines")
 """
     return {"output": AGENT.execute_python(script)}
+
+
+@retry_on_failure()
+def trigger_ue5_move_avatar(user_id: str, target_issue_id: str) -> dict[str, Any]:
+    logger.info(f"👤 Moving avatar {user_id} to {target_issue_id}")
+    script = f"""
+import unreal
+world = unreal.EditorLevelLibrary.get_editor_world()
+actors = unreal.GameplayStatics.get_all_actors_with_tag(world, "{UE5_ACTOR_TAG}")
+actor = actors[0] if actors else unreal.find_object(None, "{UE5_ACTOR_PATH}")
+if actor:
+    actor.Move_Avatar("{user_id}", "{target_issue_id}")
+    print("Success")
+"""
+    return {"output": AGENT.execute_python(script)}
+
+
+@retry_on_failure()
+def trigger_ue5_remove_avatar(user_id: str) -> dict[str, Any]:
+    logger.info(f"👤 Removing avatar {user_id}")
+    script = f"""
+import unreal
+world = unreal.EditorLevelLibrary.get_editor_world()
+actors = unreal.GameplayStatics.get_all_actors_with_tag(world, "{UE5_ACTOR_TAG}")
+actor = actors[0] if actors else unreal.find_object(None, "{UE5_ACTOR_PATH}")
+if actor:
+    actor.Remove_Avatar("{user_id}")
+    print("Success")
+"""
+    return {"output": AGENT.execute_python(script)}
