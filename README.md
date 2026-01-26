@@ -25,13 +25,12 @@ graph TD
         UE5["Unreal Engine 5.7.2<br/>(The Garden)"]
     end
 
-    Jira -->|Ticket Data| Mid
+    Jira <-->|Bidirectional Sync| Mid
     Mid -->|Design Prompt| Marble
     Marble -->|3D Scene| Genie
     Genie -->|Validation Pass| Gemini
-    Gemini -->|Physics/Interaction Tags| UE5
-    UE5 -->|User Interaction| Mid
-    Mid -->|Sync Status| Jira
+    Gemini -->|Manifest| Mid
+    Mid <-->|Events & RCP| UE5
 ```
 
 ---
