@@ -65,9 +65,20 @@ def process_ticket_event(
             )
             # Move avatar to this ticket if they are the assignee and interacting with it
             avatar_manager.update_user_location(ticket.assignee_id, ticket.id)
+
+            # Phase 5: Audio Intensity
+            # Calculate intensity based on active avatars (users working on an issue)
+            try:
+                from ue5_interface import trigger_ue5_ambience
+                active_users = sum(1 for u in avatar_manager.users.values() if u.current_issue_id)
+                # Map 0-5 users to 0.0-1.0 intensity
+                intensity = min(1.0, active_users / 5.0)
+                trigger_ue5_ambience(intensity)
+            except ImportError:
+                pass
             
     except Exception as e:
-        logger.warning(f"Avatar update failed: {e}")
+        logger.warning(f"Avatar/Audio update failed: {e}")
     
     # Import UE5 interface here to avoid circular imports
     try:
