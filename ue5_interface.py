@@ -364,3 +364,19 @@ if actor:
     actor.Set_Ambience_Intensity({val})
 """
     return {"output": AGENT.execute_python(script)}
+
+
+@retry_on_failure()
+def trigger_ue5_reset_garden() -> dict[str, Any]:
+    logger.info("Executed: Reset_Garden (Clear All)")
+    script = f"""
+import unreal
+world = unreal.EditorLevelLibrary.get_editor_world()
+actors = unreal.GameplayStatics.get_all_actors_with_tag(world, "{UE5_ACTOR_TAG}")
+actor = actors[0] if actors else unreal.find_object(None, "{UE5_ACTOR_PATH}")
+if actor:
+    # Assuming Blueprint has a 'Reset_Garden' function that clears arrays/actors
+    actor.call_method("Reset_Garden", ())
+    print("Success")
+"""
+    return {"output": AGENT.execute_python(script)}
