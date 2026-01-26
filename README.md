@@ -4,6 +4,38 @@ BloomPath is a **Digital Twin of Organization (DTO)** that visualizes project ma
 
 ---
 
+## 🟢 Workflow & AI Roles
+```mermaid
+graph TD
+    subgraph "External Source"
+        Jira["Atlassian Jira<br/>(Project Data)"]
+    end
+
+    subgraph "Python Middleware (Orchestrator)"
+        Mid["Core Engine<br/>(Webhook Handler)"]
+    end
+
+    subgraph "AI Synthesis & Validation Loop"
+        Marble["World Labs (Marble AI)<br/><i>Spatial Synthesis</i>"]
+        Genie["Google Genie 3<br/><i>Gameplay Simulation</i>"]
+        Gemini["Google Gemini<br/><i>Semantic Vision</i>"]
+    end
+
+    subgraph "Visualization & Interaction"
+        UE5["Unreal Engine 5.7.2<br/>(The Garden)"]
+    end
+
+    Jira -->|Ticket Data| Mid
+    Mid -->|Design Prompt| Marble
+    Marble -->|3D Scene| Genie
+    Genie -->|Validation Pass| Gemini
+    Gemini -->|Physics/Interaction Tags| UE5
+    UE5 -->|User Interaction| Mid
+    Mid -->|Sync Status| Jira
+```
+
+---
+
 ## 1. The Garden of Productivity (Visual Metaphor)
 Transforms complex Jira data into intuitive organic growth:
 - **Issues as Plants**: Each task manifests as a growing branch or leaf.
