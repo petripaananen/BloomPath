@@ -155,15 +155,18 @@ def _detect_linear_event(data: dict) -> dict:
         # State changed
         new_state = issue_data.get('state', {})
         state_type = new_state.get('type', '').lower()
+        state_name = new_state.get('name', '').lower()
         
         if state_type == 'completed':
             return {'event_type': 'completed'}
         elif state_type == 'canceled':
             return {'event_type': 'completed'}  # Treat as done
-        elif state_type in ['unstarted', 'started', 'triage']:
-            # If current state is unstarted/started and it was a state change, 
-            # we treat it as a reopen/shrink event.
-            return {'event_type': 'reopened'}
+        elif state_type == 'unstarted' or state_name == 'todo' or state_name == 'to do':
+            # Issue moved to "To Do" - trigger auto-build pipeline
+            return {'event_type': 'queued_for_build'}
+        elif state_type == 'started':
+            # Issue moved to "In Progress" - could trigger different action
+            return {'event_type': 'started'}
     
     # Check for blocking changes
     if 'blockedBy' in updated_from or 'blocking' in updated_from:

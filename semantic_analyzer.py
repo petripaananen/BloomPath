@@ -19,29 +19,41 @@ logger = logging.getLogger("BloomPath.Analysis.Semantic")
 
 # Gemini API Configuration
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+# Upgraded to Gemini 3 Flash (Preview) for enhanced agentic vision capabilities
+GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent"
 
 
-ANALYSIS_PROMPT = """You are a game development AI assistant. Analyze this 3D rendered scene and identify distinct objects.
+ANALYSIS_PROMPT = """You are an expert game development AI with spatial intelligence. Analyze this 3D rendered scene using multi-step reasoning.
 
-For each object you can identify, provide:
-1. semantic_type: What is it? (e.g., rock, wall, path, water, plant, bench, lantern, gate)
-2. tags: Game-relevant tags (e.g., Walkable, Obstacle, Climbable, Interactable, Decorative)
-3. physics: 
+## Step 1: Scene Understanding
+First, describe the overall scene composition, lighting, and spatial layout.
+
+## Step 2: Object Identification
+For each distinct object, provide:
+1. semantic_type: What is it? (e.g., rock, wall, path, water, plant, furniture, fireplace)
+2. estimated_position: Relative position in scene (front/back, left/right, near/far)
+3. estimated_scale: small/medium/large
+4. tags: Game-relevant tags (Walkable, Obstacle, Climbable, Interactable, Decorative, LightSource)
+5. physics:
    - friction: 0.0 (ice) to 1.0 (rough stone)
    - mass_category: light/medium/heavy/static
    - destructible: true/false
 
-Focus on objects relevant to gameplay and navigation.
-If this is a Chinese garden scene, look for: walls, paths, water features, rocks, plants, gates, bridges, lanterns.
+## Step 3: Spatial Relationships
+Note any important relationships between objects (e.g., "table is next to fireplace", "path leads to door").
+
+Focus on objects relevant to gameplay and navigation. Think step-by-step about the 3D layout.
 
 Return ONLY valid JSON in this format:
 {
   "scene_description": "Brief description of the scene",
+  "spatial_notes": "Key spatial relationships observed",
   "objects": [
     {
       "id": "obj_001",
       "semantic_type": "stone_path",
+      "estimated_position": {"x": "center", "y": "ground", "z": "front"},
+      "estimated_scale": "large",
       "tags": ["Walkable", "SoundFootstep_Stone"],
       "physics": {"friction": 0.7, "mass_category": "static", "destructible": false}
     }

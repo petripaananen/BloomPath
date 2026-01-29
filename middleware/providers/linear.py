@@ -399,3 +399,98 @@ class LinearProvider(IssueProvider):
                 result["relates_to"].append(rel.target_id)
         
         return result
+
+    def get_issue_attachments(self, issue_id: str) -> List[Dict[str, Any]]:
+        """
+        Fetch all attachments for a Linear issue.
+        
+        Args:
+            issue_id: The issue identifier (e.g., "WFM-8" or UUID)
+            
+        Returns:
+            List of attachment dicts with 'id', 'url', 'title', 'metadata'
+        """
+        query = """
+        query GetIssueAttachments($id: String!) {
+            issue(id: $id) {
+                attachments {
+                    nodes {
+                        id
+                        url
+                        title
+                        subtitle
+                        metadata
+                        source {
+                            type
+                        }
+                    }
+                }
+            }
+        }
+        """
+        
+        result = self._execute_query(query, {"id": issue_id})
+        attachments = result.get("issue", {}).get("attachments", {}).get("nodes", [])
+        
+        logger.info(f"Found {len(attachments)} attachments for issue {issue_id}")
+        return attachments
+
+    def download_attachment(self, url: str, output_path: str) -> bool:
+        """
+        Download an attachment to local filesystem.
+        
+        Args:
+            url: The attachment URL
+            output_path: Local path to save the file
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            import os
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            
+            response = requests.get(url, stream=True, timeout=60)
+            response.raise_for_status()
+            
+            with open(output_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            
+            logger.info(f"✅ Downloaded attachment to {output_path}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to download attachment: {e}")
+            return False
+
+    def get_issue_with_attachments(self, issue_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Fetch issue details along with its attachments.
+        
+        Returns a dict with issue data and attachments list.
+        """
+        query = """
+        query GetIssueWithAttachments($id: String!) {
+            issue(id: $id) {
+                id
+                identifier
+                title
+                description
+                priority
+                state { id name type }
+                attachments {
+                    nodes {
+                        id
+                        url
+                        title
+                        metadata
+                    }
+                }
+            }
+        }
+        """
+        
+        result = self._execute_query(query, {"id": issue_id})
+        return result.get("issue")
+

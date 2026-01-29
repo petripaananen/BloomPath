@@ -159,6 +159,33 @@ def process_ticket_event(
 
             return {"status": "received", "action": "dreaming_triggered_async", "issue": ticket.id}
         
+        elif event_type == 'queued_for_build':
+            # Issue moved to "To Do" - trigger World Build Pipeline
+            logger.info(f"🏗️ Auto-build triggered for {ticket.id}")
+            
+            def _run_build_pipeline(ticket_data, prov):
+                try:
+                    from world_build_pipeline import WorldBuildPipeline
+                    pipeline = WorldBuildPipeline()
+                    result = pipeline.build_from_ticket(ticket_data, prov)
+                    if result:
+                        logger.info(f"✅ Build pipeline completed for {ticket_data.id}")
+                    else:
+                        logger.error(f"Build pipeline failed for {ticket_data.id}")
+                except Exception as ex:
+                    logger.error(f"Build pipeline error: {ex}")
+            
+            import threading
+            thread = threading.Thread(target=_run_build_pipeline, args=(ticket, provider))
+            thread.daemon = False
+            thread.start()
+            
+            return {"status": "build_triggered_async", "issue": ticket.id}
+        
+        elif event_type == 'started':
+            # Issue moved to "In Progress" - log only for now
+            return {"status": "received", "action": "started", "issue": ticket.id}
+        
         else:
             # General update
             return {"status": "received", "issue": ticket.id}
