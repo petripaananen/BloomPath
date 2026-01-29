@@ -1,0 +1,56 @@
+{
+  "version": "1.0",
+  "timestamp": 1769432988,
+  "label": "Sprint Start",
+  "tickets": [
+    {
+      "id": "T-1",
+      "provider": "jira",
+      "title": "Historic Task",
+      "description": null,
+      "status": "done",
+      "issue_type": "task",
+      "priority": 3,
+      "assignee_id": null,
+      "assignee_name": null,
+      "assignee_avatar": null,
+      "parent_id": null,
+      "relations": [],
+      "labels": [],
+      "sprint_id": null,
+      "sprint_name": null,
+      "created_at": "2026-01-26T15:09:48.781036",
+      "updated_at": "2026-01-26T15:09:48.781049",
+      "raw_data": null
+    },
+    {
+      "id": "T-2",
+      "provider": "linear",
+      "title": "Future Task",
+      "description": null,
+      "status": "todo",
+      "issue_type": "feature",
+      "priority": 5,
+      "assignee_id": null,
+      "assignee_name": null,
+      "assignee_avatar": null,
+      "parent_id": null,
+      "relations": [],
+      "labels": [],
+      "sprint_id": null,
+      "sprint_name": null,
+      "created_at": "2026-01-26T15:09:48.781057",
+      "updated_at": "2026-01-26T15:09:48.781057",
+      "raw_data": null
+    }
+  ],
+  "avatars": [
+    {
+      "id": "u1",
+      "name": "Glitch",
+      "avatar_url": null,
+      "current_issue_id": "T-1",
+      "provider": "unknown"
+    }
+  ]
+}

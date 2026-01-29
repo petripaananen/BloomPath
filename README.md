@@ -8,7 +8,7 @@ BloomPath is a **Digital Twin of Organization (DTO)** that visualizes project ma
 ```mermaid
 graph TD
     subgraph "External Source"
-        Jira["Atlassian Jira<br/>(Project Data)"]
+        Jira["Jira/Linear<br/>(Project Data)"]
     end
 
     subgraph "Python Middleware (Orchestrator)"
@@ -18,11 +18,11 @@ graph TD
     subgraph "AI Synthesis & Validation Loop"
         Marble["World Labs (Marble AI)<br/><i>Spatial Synthesis</i>"]
         Genie["Google Genie 3<br/><i>Gameplay Simulation</i>"]
-        Gemini["Google Gemini<br/><i>Semantic Vision</i>"]
+        Gemini["Google Gemini 3<br/><i>Semantic Vision</i>"]
     end
 
     subgraph "Visualization & Interaction"
-        UE5["Unreal Engine 5.7.2<br/>(The Garden)"]
+        UE5["Unreal Engine 5.7.2"]
     end
 
     Jira <-->|Bidirectional Sync| Mid
