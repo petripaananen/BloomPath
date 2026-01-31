@@ -6,31 +6,52 @@ BloomPath is a **Digital Twin of Organization (DTO)** that visualizes project ma
 
 ## 🟢 Workflow & AI Roles
 ```mermaid
-graph TD
-    subgraph "External Source"
-        Jira["Jira/Linear<br/>(Project Data)"]
+flowchart TD
+    %% Define Styles
+    classDef source fill:#e1f5fe,stroke:#01579b,stroke-width:2px,color:#01579b
+    classDef middleware fill:#fff3e0,stroke:#e65100,stroke-width:3px,color:#e65100
+    classDef ai fill:#f3e5f5,stroke:#4a148c,stroke-width:2px,color:#4a148c
+    classDef viz fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px,color:#1b5e20
+
+    subgraph DataSources [Project Data Sources]
+        direction TB
+        ProjectData["Linear / Jira"]:::source
     end
 
-    subgraph "Python Middleware (Orchestrator)"
-        Mid["Core Engine<br/>(Webhook Handler)"]
+    subgraph Middleware [BloomPath Middleware]
+        Orch["Orchestrator<br/>(Python Core)"]:::middleware
     end
 
-    subgraph "AI Synthesis & Validation Loop"
-        Marble["World Labs (Marble AI)<br/><i>Spatial Synthesis</i>"]
-        Genie["Google Genie 3<br/><i>Gameplay Simulation</i>"]
-        Gemini["Google Gemini 3<br/><i>Semantic Vision</i>"]
+    subgraph AI [AI Generation and Analysis]
+        direction TB
+        Marble["World Labs Marble<br/>(3D Gen)"]:::ai
+        Genie["Google Genie 3<br/>(Simulation)"]:::ai
+        Gemini["Gemini 3 Flash<br/>(Agentic Vision)"]:::ai
+        %% Force Vertical Stack
+        Marble ~~~ Genie ~~~ Gemini
     end
 
-    subgraph "Visualization & Interaction"
-        UE5["Unreal Engine 5.7.2"]
+    subgraph Viz [The Garden - UE5]
+        UE5["Unreal Engine 5.7<br/>(Visualization)"]:::viz
     end
 
-    Jira <-->|Bidirectional Sync| Mid
-    Mid -->|Design Prompt| Marble
-    Marble -->|3D Scene| Genie
-    Genie -->|Validation Pass| Gemini
-    Gemini -->|Manifest| Mid
-    Mid <-->|Events & RCP| UE5
+    %% Data Ingestion
+    ProjectData -->|Webhooks| Orch
+
+    %% Orchestrator Loop
+    Orch -->|1. Prompt and Images| Marble
+    Marble -->|2. 3D Asset GLB| Orch
+    Orch -->|3. Simulation Request| Genie
+    Genie -->|4. Validation Verdict| Orch
+    Orch -->|5. Visual Analysis| Gemini
+    Gemini -->|6. Semantic Manifest| Orch
+
+    %% Visualization
+    Orch ==>|7. Spawn and Tag| UE5
+    
+    %% Bidirectional Feedback Loop
+    UE5 -.->|User Interaction - Watering| Orch
+    Orch -.->|Update Status - Done| ProjectData
 ```
 
 ---
@@ -44,11 +65,11 @@ Transforms complex Jira data into intuitive organic growth:
 - **Blocker Thorns**: Impediments and blocked issues manifest as thorns, providing a "glance-able" view of bottlenecks.
 
 ## 2. The PWM (Project World Model) Pipeline
-A state-of-the-art AI-driven automation loop:
-- **Intent Parsing**: Extracts design prompts from Jira tickets.
+A state-of-the-art AI-driven automation loop managed by the **Middleware Orchestrator**:
+- **Intent Parsing**: Extracts design prompts from Linear/Jira tickets.
 - **Spatial Synthesis**: Generates 3D world segments from requirements (Marble AI).
 - **AI Validation (Genie 3)**: Simulates gameplay within the generated world to verify functional requirements.
-- **Semantic Tagging (Gemini)**: Vision-based analysis that automatically injects physics and navigation data into the UE5 environment.
+- **Semantic Tagging (Gemini 3 Flash)**: Vision-based analysis that automatically injects physics and navigation data into the UE5 environment.
 
 ## 3. Environmental Intelligence (Sprint Weather)
 The atmosphere of the garden reflects the **real-time health** of the sprint:
@@ -132,6 +153,6 @@ Exposes your local server to the internet so Linear/Jira can reach it.
 ---
 
 ### 🛠️ Technical Stack
-- **Engine**: Unreal Engine 5.7.2 (Remote Control API, Niagara)
-- **Intelligence**: Google Gemini (Vision), Google Genie 3 (World Simulation), World Labs API (Marble AI)
-- **Infrastructure**: Python Middleware, Jira Cloud API, Docker.
+- **Engine**: Unreal Engine 5.7.2 (Remote Control API, Niagara, glTFRuntime)
+- **Intelligence**: Google Gemini 3 Flash (Vision), Google Genie 3 (World Simulation), World Labs API (Marble AI)
+- **Infrastructure**: Python Middleware, Linear/Jira Cloud API, Docker.
