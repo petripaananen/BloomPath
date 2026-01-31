@@ -30,10 +30,6 @@ classDiagram
         +generate_world()
     }
 
-    class GenieClient {
-        +simulate_gameplay()
-    }
-
     class SemanticAnalyzer {
         +analyze_world()
         +Gemini Vision
@@ -49,11 +45,9 @@ classDiagram
     Middleware --> BloomPathOrchestrator : Uses
     Middleware --> UE5Interface : Direct Control (Growth/Weather)
     BloomPathOrchestrator --> WorldLabsClient : 1. Synthesize
-    BloomPathOrchestrator --> GenieClient : 2. Simulate
-    BloomPathOrchestrator --> SemanticAnalyzer : 3. Tag
-    BloomPathOrchestrator --> UE5Interface : 4. Inject
+    BloomPathOrchestrator --> SemanticAnalyzer : 2. Tag
+    BloomPathOrchestrator --> UE5Interface : 3. Inject
     AI_Clients <|-- WorldLabsClient
-    AI_Clients <|-- GenieClient
     AI_Clients <|-- SemanticAnalyzer
 ```
 
@@ -65,11 +59,10 @@ This diagram illustrates how an abstract Jira Ticket is transformed into a valid
 
 ```mermaid
 sequenceDiagram
-    participant Jira as Atlassian Jira
+    participant Jira as Linear / Jira
     participant Mid as Middleware (Python)
     participant Orch as Orchestrator
     participant Marble as World Labs (Marble)
-    participant Genie as Google Genie 3
     participant Gemini as Google Gemini
     participant UE5 as Unreal Engine 5
 
@@ -78,22 +71,11 @@ sequenceDiagram
     Jira->>Mid: Webhook (Issue Updated)
     Mid->>Orch: process_ticket(issue_data)
     
-    Orch->>Orch: Parse Intent (Prompt + Mechanics)
+    Orch->>Orch: Parse Intent (Prompt)
     
-    loop Generation & Validation
-        Orch->>Marble: generate_world(prompt)
-        Marble-->>Orch: Returns .gltf + Image
-        
-        Orch->>Genie: simulate_gameplay(Image, Mechanics)
-        Genie-->>Orch: Verdict (PASS/FAIL)
-        
-        alt Verdict is FAIL
-            Orch->>Orch: Refine Prompt
-        else Verdict is PASS
-            Note right of Orch: Design Validated
-        end
-    end
-
+    Orch->>Marble: generate_world(prompt)
+    Marble-->>Orch: Returns .gltf + Image
+    
     Note over Jira, UE5: Phase 2: Semantic Injection
 
     Orch->>Gemini: analyze_world(Image)

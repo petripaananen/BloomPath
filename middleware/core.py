@@ -136,51 +136,43 @@ def process_ticket_event(
             return {"status": "thorns_removed", "issue": ticket.id}
         
         elif event_type == 'created' or (event_type == 'updated' and growth_type in ['branch', 'trunk']):
-            # New issue -> Could spawn seed/bud AND trigger Dreaming Engine
-            
-            # Initialize Dreaming Engine for ALL issues (Demo Mode)
-            # if ticket.issue_type in [IssueType.FEATURE, IssueType.EPIC]:
-            if True: # DEMO MODE: Allow any ticket to trigger dreaming
-                logger.info(f"✨ Triggering L3 Dreaming Engine for {ticket.id} (Async)...")
+            # New issue -> Check for WorldGen trigger to launch PWM Pipeline
+            if "WorldGen" in (ticket.labels or []):
+                logger.info(f"✨ Triggering PWM Pipeline for {ticket.id}...")
                 
-                def _run_dreaming_engine(ticket_data):
+                def _run_orchestrator(ticket_data):
                     try:
-                        # Re-import inside thread if needed, or rely on module level
                         from orchestrator import BloomPathOrchestrator
                         orchestrator = BloomPathOrchestrator()
                         orchestrator.process_ticket(ticket_data)
                     except Exception as ex:
-                        logger.error(f"Dreaming Engine failed: {ex}")
+                        logger.error(f"PWM Pipeline failed: {ex}")
 
                 import threading
-                thread = threading.Thread(target=_run_dreaming_engine, args=(ticket,))
-                thread.daemon = False  # Let it finish even if main thread idles (though Flask keeps running)
+                thread = threading.Thread(target=_run_orchestrator, args=(ticket,))
+                thread.daemon = False
                 thread.start()
 
-            return {"status": "received", "action": "dreaming_triggered_async", "issue": ticket.id}
+            return {"status": "received", "action": "processed", "issue": ticket.id}
         
         elif event_type == 'queued_for_build':
-            # Issue moved to "To Do" - trigger World Build Pipeline
-            logger.info(f"🏗️ Auto-build triggered for {ticket.id}")
+            # Issue moved to "To Do" - trigger PWM Pipeline
+            logger.info(f"🏗️ PWM Pipeline triggered for {ticket.id} (Queue)")
             
-            def _run_build_pipeline(ticket_data, prov):
+            def _run_orchestrator(ticket_data):
                 try:
-                    from world_build_pipeline import WorldBuildPipeline
-                    pipeline = WorldBuildPipeline()
-                    result = pipeline.build_from_ticket(ticket_data, prov)
-                    if result:
-                        logger.info(f"✅ Build pipeline completed for {ticket_data.id}")
-                    else:
-                        logger.error(f"Build pipeline failed for {ticket_data.id}")
+                    from orchestrator import BloomPathOrchestrator
+                    orchestrator = BloomPathOrchestrator()
+                    orchestrator.process_ticket(ticket_data)
                 except Exception as ex:
-                    logger.error(f"Build pipeline error: {ex}")
+                    logger.error(f"PWM Pipeline error: {ex}")
             
             import threading
-            thread = threading.Thread(target=_run_build_pipeline, args=(ticket, provider))
+            thread = threading.Thread(target=_run_orchestrator, args=(ticket,))
             thread.daemon = False
             thread.start()
             
-            return {"status": "build_triggered_async", "issue": ticket.id}
+            return {"status": "pwm_triggered_async", "issue": ticket.id}
         
         elif event_type == 'started':
             # Issue moved to "In Progress" - log only for now

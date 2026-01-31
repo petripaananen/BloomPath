@@ -40,7 +40,6 @@ class WorldLabsClient:
             return None
 
         # 1. Request Generation
-        job_id = None
         try:
             # Current API requires a nested 'world_prompt' structure
             payload = {
@@ -71,88 +70,8 @@ class WorldLabsClient:
             logger.error(f"Failed to start generation: {e}")
             return None
 
-        # 2. Poll for Completion
-        status = "IN_PROGRESS"
-        result_url = None
-        
-        # Poll loop (default 5 minutes)
-        for _ in range(60):
-            time.sleep(5) 
-            try:
-                check_resp = requests.get(f"{self.BASE_URL}/operations/{job_id}", headers=self._get_headers())
-                check_resp.raise_for_status()
-                data = check_resp.json()
-                
-                # Check 'done' boolean
-                is_done = data.get("done", False)
-                metadata = data.get("metadata", {})
-                prog_info = metadata.get("progress", {})
-                status_desc = prog_info.get("status", "UNKNOWN")
-                
-                logger.info(f"Job {job_id} status: {status_desc} (Done: {is_done})")
-                
-                if is_done:
-                    response_obj = data.get("response", {})
-                    assets = response_obj.get("assets", {})
-                    mesh_info = assets.get("mesh", {})
-                    result_url = mesh_info.get("collider_mesh_url") # Using collider mesh as proxy for GLB download
-                    
-                    if not result_url:
-                        # Fallback to other asset types if strictly needed, or error out
-                        logger.error("Generation succeeded but no mesh URL found in response")
-                        # For debugging, log keys
-                        logger.info(f"Available assets: {assets.keys()}")
-                    
-                    # Try to get thumbnail
-                    thumbnail_url = assets.get("image", {}).get("url") or assets.get("thumbnail", {}).get("url")
-                    break
-                    
-            except Exception as e:
-                logger.warning(f"Error polling job status: {e}")
-        
-        if not result_url:
-            logger.error("Generation timed out or did not return a valid URL in time")
-            return None
-
-        result_paths = {}
-
-        # 3. Download Asset (Mesh)
-        try:
-            logger.info("Downloading generated asset...")
-            asset_resp = requests.get(result_url, stream=True)
-            asset_resp.raise_for_status()
-            
-            # Ensure directory exists
-            os.makedirs(os.path.dirname(output_path), exist_ok=True)
-            
-            with open(output_path, 'wb') as f:
-                for chunk in asset_resp.iter_content(chunk_size=8192):
-                    f.write(chunk)
-                    
-            logger.info(f"Asset saved to {output_path}")
-            result_paths["mesh_path"] = output_path
-            
-        except Exception as e:
-            logger.error(f"Failed to download asset: {e}")
-            return None
-
-        # 4. Download Thumbnail (Image)
-        if thumbnail_url:
-            try:
-                img_path = output_path.replace(".gltf", ".png").replace(".glb", ".png")
-                logger.info(f"Downloading thumbnail to {img_path}...")
-                img_resp = requests.get(thumbnail_url, stream=True)
-                img_resp.raise_for_status()
-                
-                with open(img_path, 'wb') as f:
-                    for chunk in img_resp.iter_content(chunk_size=8192):
-                        f.write(chunk)
-                
-                result_paths["image_path"] = img_path
-            except Exception as e:
-                logger.warning(f"Failed to download thumbnail: {e}")
-        
-        return result_paths
+        # 2. Poll and Download
+        return self._poll_and_download(job_id, output_path)
 
     def _upload_media_asset(self, image_path: str) -> Optional[str]:
         """

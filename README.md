@@ -25,10 +25,9 @@ flowchart TD
     subgraph AI [AI Generation and Analysis]
         direction TB
         Marble["World Labs Marble<br/>(3D Gen)"]:::ai
-        Genie["Google Genie 3<br/>(Simulation)"]:::ai
-        Gemini["Gemini 3 Flash<br/>(Agentic Vision)"]:::ai
+        Gemini["Gemini 3 Flash<br/>(Vision Analysis)"]:::ai
         %% Force Vertical Stack
-        Marble ~~~ Genie ~~~ Gemini
+        Marble ~~~ Gemini
     end
 
     subgraph Viz [The Garden - UE5]
@@ -39,15 +38,13 @@ flowchart TD
     ProjectData -->|Webhooks| Orch
 
     %% Orchestrator Loop
-    Orch -->|1. Prompt and Images| Marble
+    Orch -->|1. Prompt| Marble
     Marble -->|2. 3D Asset GLB| Orch
-    Orch -->|3. Simulation Request| Genie
-    Genie -->|4. Validation Verdict| Orch
-    Orch -->|5. Visual Analysis| Gemini
-    Gemini -->|6. Semantic Manifest| Orch
+    Orch -->|3. Visual Analysis| Gemini
+    Gemini -->|4. Semantic Manifest| Orch
 
     %% Visualization
-    Orch ==>|7. Spawn and Tag| UE5
+    Orch ==>|5. Spawn and Tag| UE5
     
     %% Bidirectional Feedback Loop
     UE5 -.->|User Interaction - Watering| Orch
@@ -68,8 +65,7 @@ Transforms complex project data into intuitive organic growth:
 A state-of-the-art AI-driven automation loop managed by the **Middleware Orchestrator**:
 - **Intent Parsing**: Extracts design prompts from Linear/Jira tickets.
 - **Spatial Synthesis**: Generates 3D world segments from requirements (Marble AI).
-- **AI Validation (Genie 3)**: Simulates gameplay within the generated world to verify functional requirements.
-- **Semantic Tagging (Gemini 3 Flash)**: Vision-based analysis that automatically injects physics and navigation data into the UE5 environment.
+- **Agentic Vision Analysis (Gemini 3 Flash)**: Multi-modal analysis that automatically injects physics and navigation data into the UE5 environment, validating the design against the original intent.
 
 ## 3. Environmental Intelligence (Cycle/Sprint Weather)
 The atmosphere of the garden reflects the **real-time health** of the cycle/sprint:
@@ -161,5 +157,5 @@ Exposes your local server to the internet so Linear/Jira can reach it.
 
 ### 🛠️ Technical Stack
 - **Engine**: Unreal Engine 5.7.2 (Remote Control API, Niagara, glTFRuntime)
-- **Intelligence**: Google Gemini 3 Flash (Vision), Google Genie 3 (World Simulation), World Labs API (Marble AI)
+- **Intelligence**: Google Gemini 3 Flash (Vision Analysis), World Labs API (Marble AI)
 - **Infrastructure**: Python Middleware, Linear/Jira Cloud API.
