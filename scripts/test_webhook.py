@@ -34,7 +34,14 @@ payload = {
 import hmac
 import hashlib
 
-secret = "lin_wh_959a1bcba7897e5c6f2a621ad2f42ee8a0da0c16fad0"
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+secret = os.getenv("LINEAR_WEBHOOK_SECRET")
+if not secret:
+    print("❌ Error: LINEAR_WEBHOOK_SECRET not set in .env")
+    exit(1)
 payload_bytes = json.dumps(payload).encode('utf-8')
 signature = hmac.new(secret.encode('utf-8'), payload_bytes, hashlib.sha256).hexdigest()
 
