@@ -9,7 +9,7 @@ if (-not (Get-Command ngrok -ErrorAction SilentlyContinue)) {
     exit 1
 }
 
-$port = 5000
+$port = 5005
 Write-Host "📡 Starting tunnel on port $port..." -ForegroundColor Cyan
 Write-Host "The tunnel URL will be available at http://localhost:4040/api/tunnels" -ForegroundColor Gray
 
