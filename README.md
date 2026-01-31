@@ -72,6 +72,65 @@ A truly interactive DTO, not just a dashboard:
 
 ---
 
+## 🚀 Getting Started
+
+### 1. Setup & Installation
+**Prerequisites**:
+- Python 3.14+
+- `ngrok` (for webhook tunneling)
+- Unreal Engine 5.7.2
+
+**Installation**:
+```bash
+# Clone the repository
+git clone https://github.com/petolapa/BloomPath.git
+cd BloomPath
+
+# Install Python dependencies
+pip install -r requirements.txt
+```
+
+**Configuration**:
+1. Copy the template: `cp .env.template .env`
+2. Update `.env` with your keys:
+   - **Linear**: API Key, Team ID, Webhook Secret
+   - **Jira**: Domain, Email, API Token
+   - **AI Services**: Gemini, World Labs, etc.
+
+> [!WARNING]
+> **Security Note**: Never commit your `.env` file. It is excluded by `.gitignore` to protect your secrets.
+
+---
+
+### 2. Running the Application
+You will need two terminal windows running simultaneously:
+
+**Terminal 1: Middleware**
+Starts the Python server to handle webhooks and game logic.
+```powershell
+.\start_bloompath.ps1
+```
+
+**Terminal 2: Tunnel**
+Exposes your local server to the internet so Linear/Jira can reach it.
+```powershell
+.\start_ngrok.ps1
+```
+*Copy the `https` URL from the output (e.g., `https://xyz.ngrok-free.app`).*
+
+---
+
+### 3. Integrations Setup
+
+#### Linear Webhooks
+1. Go to your Linear Workspace Settings -> API -> Webhooks.
+2. Create a new webhook.
+3. **URL**: Paste your ngrok URL and append `/webhooks/linear` (e.g., `https://xyz.ngrok-free.app/webhooks/linear`).
+4. **Events**: Select "Issues" (Create, Update).
+5. **Secret**: Copy the "Signing secret" (`lin_wh_...`) into your `.env`.
+
+---
+
 ### 🛠️ Technical Stack
 - **Engine**: Unreal Engine 5.7.2 (Remote Control API, Niagara)
 - **Intelligence**: Google Gemini (Vision), Google Genie 3 (World Simulation), World Labs API (Marble AI)
