@@ -2,7 +2,14 @@ import os
 import requests
 import time
 
-API_KEY = os.environ.get("LINEAR_API_KEY") or "lin_api_X43vEYPTCxCdLCYIlLlHyRe9TT514qEJCDAy4nsw"
+from dotenv import load_dotenv
+
+load_dotenv()
+API_KEY = os.environ.get("LINEAR_API_KEY")
+
+if not API_KEY:
+    print("❌ Error: LINEAR_API_KEY not found in environment")
+    exit(1)
 GRAPHQL_URL = "https://api.linear.app/graphql"
 HEADERS = {"Authorization": API_KEY, "Content-Type": "application/json"}
 

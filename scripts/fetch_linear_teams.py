@@ -2,10 +2,13 @@ import os
 import requests
 import json
 
+from dotenv import load_dotenv
+
+load_dotenv()
 api_key = os.environ.get("LINEAR_API_KEY")
 if not api_key:
-    # Fallback if env var isn't picked up immediately in this session
-    api_key = "lin_api_X43vEYPTCxCdLCYIlLlHyRe9TT514qEJCDAy4nsw"
+    print("❌ Error: LINEAR_API_KEY not found in environment")
+    exit(1)
 
 print(f"Using API Key: {api_key[:10]}...")
 
