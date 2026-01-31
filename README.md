@@ -150,6 +150,13 @@ Exposes your local server to the internet so Linear/Jira can reach it.
 4. **Events**: Select "Issues" (Create, Update).
 5. **Secret**: Copy the "Signing secret" (`lin_wh_...`) into your `.env`.
 
+#### Jira Webhooks
+1. Go to **System** -> **Webhooks** (Global) or Project Settings.
+2. Create a new Webhook.
+3. **URL**: Paste your ngrok URL and append `/webhooks/jira` (e.g., `https://xyz.ngrok-free.app/webhooks/jira`).
+4. **JQL Filter**: `project = "PROJ"` (Replace "PROJ" with your actual Project Key to filter events).
+5. **Events**: under **Issue**, checking **Created** and **Updated**.
+
 ---
 
 ### 🛠️ Technical Stack
