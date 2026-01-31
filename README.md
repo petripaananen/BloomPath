@@ -87,8 +87,8 @@ Advanced "What-If" simulations that let the system "see" into the project's futu
 
 ## 5. Bidirectional Interaction
 A truly interactive DTO, not just a dashboard:
-- **Watering Loop**: Interacting with plants in UE5 (e.g., watering) can trigger status transitions in Linear/Jira.
-- **Avatar Presence**: Team members are represented as "Gardener NPCs" near their assigned tasks.
+- **Interaction Loop**: Interacting with project elements in UE5 (e.g., watering) can trigger status transitions in Linear/Jira.
+- **Avatar Presence**: Team members are represented as "Team Avatars" near their assigned tasks.
 - **Spatial Audio**: Success chimes and risk notification sounds provide an immersive auditory feedback layer.
 
 ---
