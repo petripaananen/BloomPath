@@ -1,6 +1,6 @@
 # 🌸 BloomPath: The Garden of Productivity
 
-BloomPath is a **Digital Twin of Organization (DTO)** that visualizes project management data (Jira) as a dynamic 3D "Garden of Productivity" in Unreal Engine 5. It bridges the gap between abstract workflows and spatial awareness.
+BloomPath is a **Digital Twin of Organization (DTO) and Simulation** that visualizes project management data (Linear/Jira) as a dynamic, immersive 3D environment in Unreal Engine 5. It bridges the gap between abstract workflows and spatial awareness.
 
 ---
 
@@ -56,8 +56,8 @@ flowchart TD
 
 ---
 
-## 1. The Garden of Productivity (Visual Metaphor)
-Transforms complex Jira data into intuitive organic growth:
+## 1. Organic Data Visualization
+Transforms complex project data into intuitive organic growth:
 - **Issues as Plants**: Each task manifests as a growing branch or leaf.
 - **Organic Metadata Mapping**: 
   - **Priority ➔ Scale**: Urgent tasks appear larger.
@@ -71,23 +71,23 @@ A state-of-the-art AI-driven automation loop managed by the **Middleware Orchest
 - **AI Validation (Genie 3)**: Simulates gameplay within the generated world to verify functional requirements.
 - **Semantic Tagging (Gemini 3 Flash)**: Vision-based analysis that automatically injects physics and navigation data into the UE5 environment.
 
-## 3. Environmental Intelligence (Sprint Weather)
-The atmosphere of the garden reflects the **real-time health** of the sprint:
-- **Sprint Weather**:
+## 3. Environmental Intelligence (Cycle/Sprint Weather)
+The atmosphere of the garden reflects the **real-time health** of the cycle/sprint:
+- **Cycle/Sprint Weather**:
   - ☀️ **Sunny**: High velocity, on track.
   - ⛈️ **Stormy**: Critical blockers or behind schedule.
-- **Sprint Clock**: Time-of-day (Dawn to Sunset) maps to the current sprint cycle progress.
+- **Cycle/Sprint Clock**: Time-of-day (Dawn to Sunset) maps to the current cycle/sprint progress.
 
 ## 4. Future-Proof Planning (The "Dreaming Engine")
 Advanced "What-If" simulations that let the system "see" into the project's future:
 - **Project Forecasting**: The garden "dreams" potential outcomes, showing how your project will likely grow based on today's trends.
-- **Early-Warning Visuals**: Predicts and visualizes upcoming risks (like bottlenecks) as "storm clouds" over specific areas before they hit your Jira board.
+- **Early-Warning Visuals**: Predicts and visualizes upcoming risks (like bottlenecks) as "storm clouds" over specific areas before they hit your board.
 - **Stress-Testing**: Test "what-if" scenarios—like adding extra scope or shifting team resources—and see the visual impact on delivery immediately.
 - **Smart Decision Support**: Simple summaries of best and worst-case outcomes to help teams stay proactive.
 
 ## 5. Bidirectional Interaction
 A truly interactive DTO, not just a dashboard:
-- **Watering Loop**: Interacting with plants in UE5 (e.g., watering) can trigger status transitions in Jira.
+- **Watering Loop**: Interacting with plants in UE5 (e.g., watering) can trigger status transitions in Linear/Jira.
 - **Avatar Presence**: Team members are represented as "Gardener NPCs" near their assigned tasks.
 - **Spatial Audio**: Success chimes and risk notification sounds provide an immersive auditory feedback layer.
 
@@ -155,4 +155,4 @@ Exposes your local server to the internet so Linear/Jira can reach it.
 ### 🛠️ Technical Stack
 - **Engine**: Unreal Engine 5.7.2 (Remote Control API, Niagara, glTFRuntime)
 - **Intelligence**: Google Gemini 3 Flash (Vision), Google Genie 3 (World Simulation), World Labs API (Marble AI)
-- **Infrastructure**: Python Middleware, Linear/Jira Cloud API, Docker.
+- **Infrastructure**: Python Middleware, Linear/Jira Cloud API.
