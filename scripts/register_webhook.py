@@ -9,9 +9,9 @@ NGROK_URL = "https://nonmotoring-closefisted-dorine.ngrok-free.dev"
 WEBHOOK_URL = f"{NGROK_URL}/webhooks/linear"
 
 if not API_KEY or not TEAM_ID:
-    # Fallback for reliability in this shell
-    API_KEY = "lin_api_X43vEYPTCxCdLCYIlLlHyRe9TT514qEJCDAy4nsw"
-    TEAM_ID = "309b158e-1d2e-4722-bddc-e8b1c7f8b1f9"
+    print("❌ Error: Missing LINEAR_API_KEY or LINEAR_TEAM_ID environment variables.")
+    print("Please set these in your .env file or environment.")
+    exit(1)
 
 GRAPHQL_URL = "https://api.linear.app/graphql"
 HEADERS = {

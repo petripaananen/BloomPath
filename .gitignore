@@ -1,4 +1,6 @@
 .env
+*.env
+linear_secret.txt
 __pycache__/
 *.pyc
 .venv/
