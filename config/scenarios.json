@@ -1,0 +1,23 @@
+{
+  "resource_stress": {
+    "description": "What if we lose a team member?",
+    "default_params": {
+      "remove_count": 1
+    }
+  },
+  "scope_creep": {
+    "description": "What if more issues are added mid-sprint?",
+    "default_params": {
+      "additional_issues": 5,
+      "issue_type": "task",
+      "priority": 3
+    }
+  },
+  "priority_shift": {
+    "description": "What if we reallocate resources to another epic?",
+    "default_params": {
+      "target_epic": null,
+      "shift_percentage": 30
+    }
+  }
+}

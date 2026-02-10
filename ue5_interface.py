@@ -19,7 +19,48 @@ PRIORITY_COLORS = {
     "Medium": {"R": 0.3, "G": 0.8, "B": 0.3},
     "Low": {"R": 0.4, "G": 0.6, "B": 0.4},
     "Lowest": {"R": 0.5, "G": 0.5, "B": 0.5},
+    "Low": {"R": 0.4, "G": 0.6, "B": 0.4},
+    "Lowest": {"R": 0.5, "G": 0.5, "B": 0.5},
 }
+
+
+class CommandBatcher:
+    """Buffers UE5 commands to execute them in a single call."""
+
+    def __init__(self):
+        self._buffer: list[str] = []
+
+    def add(self, command_script: str):
+        """Add a python script snippet to the batch."""
+        self._buffer.append(command_script)
+
+    def flush(self) -> dict[str, Any]:
+        """Execute all buffered commands as one script."""
+        if not self._buffer:
+            return {"status": "empty"}
+
+        # Combine all scripts, ensuring imports are handled at the top if needed
+        # For simplicity, we just concatenate. UE5 Python environment persists globals
+        # but re-importing 'unreal' is cheap/safe.
+        combined_script = "\n".join(self._buffer)
+        
+        try:
+            # We wrap in a try-except block in the script itself to prevent one failure stopping others
+            # or just let it fail fast. Here we let it run sequentially.
+            logger.info(f"🚀 Executing batch of {len(self._buffer)} commands")
+            output = AGENT.execute_python(combined_script)
+            self._buffer.clear()
+            return {"output": output}
+        except Exception as e:
+            logger.error(f"Batch execution failed: {e}")
+            return {"error": str(e)}
+
+    def clear(self):
+        self._buffer.clear()
+
+
+# Global batcher instance
+BATCHER = CommandBatcher()
 
 def retry_on_failure(max_retries: int = 3, delay: float = 1.0):
     """Decorator to retry a function on failure."""
@@ -286,38 +327,42 @@ if actor:
     return {"output": AGENT.execute_python(script)}
 
 @retry_on_failure()
-def trigger_ue5_sync_all_vines(dependencies: list[dict]) -> dict:
-    logger.info(f"🔄 Syncing vines batch")
-    deps_json = json.dumps(dependencies).replace('"', '\\"') # Escape quotes for the python script string
+def trigger_ue5_sync_all_vines(dependencies: list[dict]) -> dict[str, Any]:
+    """
+    Sync all vines in one go using the new Batcher.
     
-    script = f"""
-import unreal
-import json
-world = unreal.EditorLevelLibrary.get_editor_world()
-actors = unreal.GameplayStatics.get_all_actors_with_tag(world, "{UE5_ACTOR_TAG}")
-actor = actors[0] if actors else unreal.find_object(None, "{UE5_ACTOR_PATH}")
+    This replaces the old loop-based approach.
+    """
+    logger.info(f"Syncing {len(dependencies)} dependency vines...")
+    
+    BATCHER.clear()
+    
+    # Common imports for the batch script
+    BATCHER.add("import unreal")
+    BATCHER.add("world = unreal.EditorLevelLibrary.get_editor_world()")
+    BATCHER.add(f"actors = unreal.GameplayStatics.get_all_actors_with_tag(world, '{UE5_ACTOR_TAG}')")
+    BATCHER.add(f"actor = actors[0] if actors else unreal.find_object(None, '{UE5_ACTOR_PATH}')")
+    
+    for dep in dependencies:
+        from_id = dep.get('from')
+        to_id = dep.get('to')
+        rtype = dep.get('type', 'relates_to')
+        
+        style = VINE_STYLES.get(rtype, VINE_STYLES["relates_to"])
+        color = style["color"]
+        c = color # shorter alias
+        vine_id = f"vine_{from_id}_{to_id}_{rtype}"
+        
+        # We append the specific call to the batch script
+        script = f"""
 if actor:
-    deps_raw = "{deps_json}"
-    deps = json.loads(deps_raw)
-    count = 0
-    for d in deps:
-        rel_type = d.get('relation_type', 'relates_to')
-        style = {{
-            'blocked_by': {{'r':0.8,'g':0.1,'b':0.1, 'th':0.15, 'thorn':True, 'anim':'pulse_warning'}},
-            'blocks': {{'r':0.8,'g':0.4,'b':0.1, 'th':0.12, 'thorn':True, 'anim':'pulse_slow'}},
-            'relates_to': {{'r':0.3,'g':0.7,'b':0.3, 'th':0.08, 'thorn':False, 'anim':'none'}},
-            'parent': {{'r':0.4,'g':0.3,'b':0.2, 'th':0.2, 'thorn':False, 'anim':'none'}},
-            'child': {{'r':0.5,'g':0.8,'b':0.5, 'th':0.06, 'thorn':False, 'anim':'none'}}
-        }}.get(rel_type, {{'r':0.3,'g':0.7,'b':0.3, 'th':0.08, 'thorn':False, 'anim':'none'}})
-        
-        vine_id = f"vine_{{d['from_id']}}_{{d['to_id']}}_{{rel_type}}"
-        
-        actor.Spawn_Dependency_Vine(vine_id, d['from_id'], d['to_id'], rel_type, 
-            style['r'], style['g'], style['b'], style['th'], style['thorn'], style['anim'])
-        count += 1
-    print(f"Synced {{count}} vines")
+    # Spawn_Dependency_Vine(Vine_ID, From, To, Type, Color_R, G, B, Thick, Thorns, Anim)
+    actor.Spawn_Dependency_Vine("{vine_id}", "{from_id}", "{to_id}", "{rtype}", 
+        {c['R']}, {c['G']}, {c['B']}, {style['thickness']}, {style['has_thorns']}, "{style['animation']}")
 """
-    return {"output": AGENT.execute_python(script)}
+        BATCHER.add(script)
+        
+    return BATCHER.flush()
 
 
 @retry_on_failure()
@@ -377,6 +422,63 @@ actor = actors[0] if actors else unreal.find_object(None, "{UE5_ACTOR_PATH}")
 if actor:
     # Assuming Blueprint has a 'Reset_Garden' function that clears arrays/actors
     actor.call_method("Reset_Garden", ())
+    print("Success")
+"""
+    return {"output": AGENT.execute_python(script)}
+
+
+# ── Ghost Garden (Dreaming Engine) ──────────────────────────────────
+
+
+@retry_on_failure()
+def trigger_ue5_ghost_overlay(scenario_id: str, intensity: float = 0.5) -> dict[str, Any]:
+    """Apply a semi-transparent ghost overlay for a dreaming scenario."""
+    intensity = max(0.0, min(1.0, intensity))
+    logger.info(f"Executed: Ghost_Overlay (scenario={scenario_id}, intensity={intensity})")
+    script = f"""
+import unreal
+world = unreal.EditorLevelLibrary.get_editor_world()
+actors = unreal.GameplayStatics.get_all_actors_with_tag(world, "{UE5_ACTOR_TAG}")
+actor = actors[0] if actors else unreal.find_object(None, "{UE5_ACTOR_PATH}")
+if actor:
+    actor.call_method("Set_Ghost_Overlay", ("{scenario_id}", {intensity}))
+    print("Success")
+"""
+    return {"output": AGENT.execute_python(script)}
+
+
+@retry_on_failure()
+def trigger_ue5_ghost_growth(
+    branch_id: str,
+    growth_type: str = "leaf",
+    opacity: float = 0.5
+) -> dict[str, Any]:
+    """Spawn a ghosted (semi-transparent) plant for a simulation."""
+    opacity = max(0.0, min(1.0, opacity))
+    logger.info(f"Executed: Ghost_Grow ({branch_id}, type={growth_type}, opacity={opacity})")
+    script = f"""
+import unreal
+world = unreal.EditorLevelLibrary.get_editor_world()
+actors = unreal.GameplayStatics.get_all_actors_with_tag(world, "{UE5_ACTOR_TAG}")
+actor = actors[0] if actors else unreal.find_object(None, "{UE5_ACTOR_PATH}")
+if actor:
+    actor.call_method("Ghost_Grow", ("{branch_id}", "{growth_type}", {opacity}))
+    print("Success")
+"""
+    return {"output": AGENT.execute_python(script)}
+
+
+@retry_on_failure()
+def trigger_ue5_clear_ghosts() -> dict[str, Any]:
+    """Remove all ghost overlays from the garden."""
+    logger.info("Executed: Clear_Ghosts (Remove All)")
+    script = f"""
+import unreal
+world = unreal.EditorLevelLibrary.get_editor_world()
+actors = unreal.GameplayStatics.get_all_actors_with_tag(world, "{UE5_ACTOR_TAG}")
+actor = actors[0] if actors else unreal.find_object(None, "{UE5_ACTOR_PATH}")
+if actor:
+    actor.call_method("Clear_Ghosts", ())
     print("Success")
 """
     return {"output": AGENT.execute_python(script)}

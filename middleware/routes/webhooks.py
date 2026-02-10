@@ -10,7 +10,7 @@ from flask import Blueprint, request, jsonify
 
 from middleware.providers.jira import JiraProvider
 from middleware.providers.linear import LinearProvider
-from middleware.core import process_ticket_event
+from middleware.task_queue import enqueue_ticket_event
 
 logger = logging.getLogger("BloomPath.Routes.Webhooks")
 
@@ -40,8 +40,9 @@ def jira_webhook():
         # Detect event type from changelog
         event_info = _detect_jira_event(data)
         
-        result = process_ticket_event(ticket, event_info, provider)
-        return jsonify(result), 200
+        # Enqueue for background processing — respond immediately
+        enqueue_ticket_event(ticket, event_info, provider)
+        return jsonify({"status": "accepted", "issue": ticket.id}), 200
         
     except Exception as e:
         logger.error(f"Error processing Jira webhook: {e}", exc_info=True)
@@ -61,8 +62,7 @@ def linear_webhook():
         logger.warning("Received Linear webhook with no JSON payload")
         return jsonify({"status": "error", "message": "No JSON payload"}), 400
     
-    # DEBUG: Log everything
-    logger.info(f"📨 WE GOT MAIL! Action: {data.get('action')} | Type: {data.get('type')}")
+    logger.info(f"📨 Linear webhook: Action={data.get('action')} Type={data.get('type')}")
     
     # Verify signature
     signature = request.headers.get('X-Linear-Signature', '')
@@ -81,8 +81,9 @@ def linear_webhook():
         # Map Linear actions to event types
         event_info = _detect_linear_event(data)
         
-        result = process_ticket_event(ticket, event_info, provider)
-        return jsonify(result), 200
+        # Enqueue for background processing — respond immediately
+        enqueue_ticket_event(ticket, event_info, provider)
+        return jsonify({"status": "accepted", "issue": ticket.id}), 200
         
     except Exception as e:
         logger.error(f"Error processing Linear webhook: {e}", exc_info=True)

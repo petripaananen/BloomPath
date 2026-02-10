@@ -31,6 +31,8 @@ def _get_provider(provider_name: str = None):
 @api_bp.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint for monitoring."""
+    from middleware.task_queue import get_queue_status
+
     jira = JiraProvider()
     linear = LinearProvider()
     
@@ -44,7 +46,8 @@ def health_check():
             "linear": {
                 "configured": bool(linear.api_key)
             }
-        }
+        },
+        "task_queue": get_queue_status()
     }), 200
 
 
@@ -232,3 +235,129 @@ def get_dependencies(issue_id: str):
     except Exception as e:
         logger.error(f"Error getting dependencies for {issue_id}: {e}", exc_info=True)
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@api_bp.route('/dream', methods=['POST'])
+def trigger_dream():
+    """
+    Run a what-if simulation (Dreaming Engine).
+
+    JSON Body:
+    {
+        "scenario": "resource_stress" | "scope_creep" | "priority_shift",
+        "params": { ... scenario-specific overrides },
+        "visualize": true  // optional, send ghost overlay to UE5
+    }
+
+    Sprint data is fetched automatically from the active provider.
+    """
+    from dreaming_engine import dreaming_engine
+
+    data = request.get_json(silent=True) or {}
+    scenario_type = data.get("scenario")
+
+    if not scenario_type:
+        return jsonify({
+            "status": "error",
+            "message": "Missing 'scenario' field. Options: resource_stress, scope_creep, priority_shift"
+        }), 400
+
+    valid_scenarios = ["resource_stress", "scope_creep", "priority_shift"]
+    if scenario_type not in valid_scenarios:
+        return jsonify({
+            "status": "error",
+            "message": f"Invalid scenario. Options: {', '.join(valid_scenarios)}"
+        }), 400
+
+    # Gather current sprint data from the active provider
+    provider = _get_provider()
+    try:
+        sprint_data = _build_sprint_data(provider)
+    except Exception as e:
+        logger.error(f"Failed to gather sprint data for dream: {e}")
+        return jsonify({"status": "error", "message": f"Failed to gather sprint data: {e}"}), 500
+
+    # Run the simulation
+    params = data.get("params", {})
+    result = dreaming_engine.dream(scenario_type, sprint_data, params)
+
+    # Optionally visualize in UE5
+    viz_status = {}
+    if data.get("visualize", False):
+        viz_status = dreaming_engine.visualize_dream(result)
+
+    from dataclasses import asdict
+    return jsonify({
+        "status": "ok",
+        "dream": asdict(result),
+        "visualization": viz_status
+    }), 200
+
+
+@api_bp.route('/dreams', methods=['GET'])
+def list_dreams():
+    """List all past dream simulation results."""
+    from dreaming_engine import dreaming_engine
+
+    dreams = dreaming_engine.list_dreams()
+    return jsonify({
+        "status": "ok",
+        "count": len(dreams),
+        "dreams": dreams
+    }), 200
+
+
+def _build_sprint_data(provider) -> dict:
+    """
+    Build the sprint_data dict required by DreamingEngine.dream().
+
+    Fetches the active sprint/cycle and its issues from the provider,
+    then normalizes into the format the engine expects.
+    """
+    sprint = provider.get_active_sprint_or_cycle()
+    if not sprint:
+        return {
+            "issues": [],
+            "team_members": [],
+            "velocity": 0,
+            "days_remaining": 0
+        }
+
+    sprint_id = sprint.get("id", "")
+    issues = provider.get_sprint_issues(sprint_id)
+
+    # Extract team members and build lightweight issue dicts
+    team_set = set()
+    issue_dicts = []
+    done_count = 0
+
+    for ticket in issues:
+        if ticket.assignee_name:
+            team_set.add(ticket.assignee_name)
+        issue_dicts.append({
+            "id": ticket.id,
+            "status": ticket.status.value if ticket.status else "unknown",
+            "assignee": ticket.assignee_name or "unassigned",
+            "priority": ticket.priority,
+            "epic": ticket.parent_id or "no_epic"
+        })
+        if ticket.status and ticket.status.value == "done":
+            done_count += 1
+
+    # Calculate days remaining from sprint dates
+    days_remaining = 0
+    if sprint.get("end_date"):
+        import datetime
+        try:
+            end = datetime.datetime.fromisoformat(sprint["end_date"].replace("Z", "+00:00"))
+            now = datetime.datetime.now(datetime.timezone.utc)
+            days_remaining = max(0, (end - now).days)
+        except (ValueError, TypeError):
+            days_remaining = 5  # fallback
+
+    return {
+        "issues": issue_dicts,
+        "team_members": list(team_set),
+        "velocity": done_count,
+        "days_remaining": days_remaining
+    }

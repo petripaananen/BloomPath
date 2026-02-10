@@ -128,3 +128,35 @@ class BloomPathOrchestrator:
                         logger.info(f"Injected tag '{tag}' to actor '{target_actor}'")
                     except Exception as e:
                         logger.error(f"Failed to inject tag: {e}")
+
+    def dream_scenario(
+        self,
+        scenario_type: str,
+        sprint_data: dict,
+        params: dict = None,
+        visualize: bool = True
+    ) -> dict:
+        """
+        Run a what-if simulation through the Dreaming Engine.
+
+        Args:
+            scenario_type: 'resource_stress', 'scope_creep', or 'priority_shift'
+            sprint_data: Current sprint state dict
+            params: Optional overrides for scenario defaults
+            visualize: If True, send ghost overlay to UE5
+
+        Returns:
+            DreamResult as dict with projected outcomes
+        """
+        from dreaming_engine import dreaming_engine
+        from dataclasses import asdict
+
+        logger.info(f"🌙 Orchestrator: Dreaming '{scenario_type}'...")
+
+        result = dreaming_engine.dream(scenario_type, sprint_data, params)
+
+        if visualize:
+            viz = dreaming_engine.visualize_dream(result)
+            logger.info(f"🌙 Ghost visualization: {viz}")
+
+        return asdict(result)

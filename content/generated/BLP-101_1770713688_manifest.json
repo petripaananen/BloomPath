@@ -1,0 +1,11 @@
+{
+  "objects": [
+    {
+      "name": "Island",
+      "semantic_type": "StaticMesh",
+      "tags": [
+        "Floating"
+      ]
+    }
+  ]
+}

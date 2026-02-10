@@ -139,40 +139,26 @@ def process_ticket_event(
             # New issue -> Check for WorldGen trigger to launch PWM Pipeline
             if "WorldGen" in (ticket.labels or []):
                 logger.info(f"✨ Triggering PWM Pipeline for {ticket.id}...")
-                
-                def _run_orchestrator(ticket_data):
-                    try:
-                        from orchestrator import BloomPathOrchestrator
-                        orchestrator = BloomPathOrchestrator()
-                        orchestrator.process_ticket(ticket_data)
-                    except Exception as ex:
-                        logger.error(f"PWM Pipeline failed: {ex}")
-
-                import threading
-                thread = threading.Thread(target=_run_orchestrator, args=(ticket,))
-                thread.daemon = False
-                thread.start()
+                try:
+                    from orchestrator import BloomPathOrchestrator
+                    orchestrator = BloomPathOrchestrator()
+                    orchestrator.process_ticket(ticket)
+                except Exception as ex:
+                    logger.error(f"PWM Pipeline failed: {ex}")
 
             return {"status": "received", "action": "processed", "issue": ticket.id}
         
         elif event_type == 'queued_for_build':
             # Issue moved to "To Do" - trigger PWM Pipeline
             logger.info(f"🏗️ PWM Pipeline triggered for {ticket.id} (Queue)")
+            try:
+                from orchestrator import BloomPathOrchestrator
+                orchestrator = BloomPathOrchestrator()
+                orchestrator.process_ticket(ticket)
+            except Exception as ex:
+                logger.error(f"PWM Pipeline error: {ex}")
             
-            def _run_orchestrator(ticket_data):
-                try:
-                    from orchestrator import BloomPathOrchestrator
-                    orchestrator = BloomPathOrchestrator()
-                    orchestrator.process_ticket(ticket_data)
-                except Exception as ex:
-                    logger.error(f"PWM Pipeline error: {ex}")
-            
-            import threading
-            thread = threading.Thread(target=_run_orchestrator, args=(ticket,))
-            thread.daemon = False
-            thread.start()
-            
-            return {"status": "pwm_triggered_async", "issue": ticket.id}
+            return {"status": "pwm_triggered", "issue": ticket.id}
         
         elif event_type == 'started':
             # Issue moved to "In Progress" - log only for now
@@ -215,21 +201,33 @@ def process_dependencies_visualization(ticket: UnifiedTicket) -> None:
     Called after a ticket is processed to draw connections.
     """
     try:
-        from ue5_interface import trigger_ue5_dependency_vine
+        from ue5_interface import trigger_ue5_sync_all_vines
+        from middleware.routes.api import _get_provider
         
-        for blocked_id in ticket.blocked_by:
-            trigger_ue5_dependency_vine(
-                from_id=ticket.id,
-                to_id=blocked_id,
-                relation_type="blocked_by"
-            )
+        provider_name = ticket.provider
+        # We need a provider instance to fetch dependencies
+        # This is a bit of a circular dependency if we import specific provider classes here
+        # Ideally, the caller should have passed the dependencies or the provider
+        # For now, let's just use the provider attached to the ticket if available, or fetch fresh
         
-        for blocking_id in ticket.blocking:
-            trigger_ue5_dependency_vine(
-                from_id=ticket.id,
-                to_id=blocking_id,
-                relation_type="blocks"
-            )
+        # Simplified: We just fetch dependencies for THIS ticket and sync them
+        # In a real batch scenario, we'd sync the whole graph
+        
+        provider = _get_provider(provider_name)
+        
+        deps = provider.get_issue_dependencies(ticket.id)
+        if deps:
+            # Transform to the format expected by sync_all_vines
+            formatted_deps = []
+            for d in deps:
+                formatted_deps.append({
+                    "from": ticket.id,
+                    "to": d['id'],
+                    "type": d['relation_type']
+                })
+            
+            trigger_ue5_sync_all_vines(formatted_deps)
+            
     except ImportError:
         logger.debug("Dependency vine visualization not available")
     except Exception as e:
