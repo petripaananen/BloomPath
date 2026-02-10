@@ -1,0 +1,32 @@
+{
+  "scenario_type": "resource_stress",
+  "scenario_params": {
+    "remove_count": 1
+  },
+  "timestamp": 1770727088,
+  "dream_id": "dream_resource_stress_1770727088",
+  "original_velocity": 4.0,
+  "projected_velocity": 2.6666666666666665,
+  "risk_score": 0.25,
+  "impact_summary": "Removing resources would reduce velocity by 1.3 issues/sprint (low risk). 1 issues would become unassigned.",
+  "affected_issues": [
+    "WFM-2"
+  ],
+  "ghost_intensity": 0.425,
+  "visual_effects": [
+    {
+      "type": "narrow_paths",
+      "intensity": 0.25
+    },
+    {
+      "type": "slow_growth",
+      "factor": 0.6666666666666666
+    },
+    {
+      "type": "wilted_leaves",
+      "issue_ids": [
+        "WFM-2"
+      ]
+    }
+  ]
+}
