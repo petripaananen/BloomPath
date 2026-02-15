@@ -100,7 +100,7 @@ A truly interactive DTO, not just a dashboard:
 **Installation**:
 ```bash
 # Clone the repository
-git clone https://github.com/petolapa/BloomPath.git
+git clone https://github.com/petripaananen/BloomPath.git
 cd BloomPath
 
 # Install Python dependencies

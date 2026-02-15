@@ -16,7 +16,7 @@ If you discover a security vulnerability in BloomPath, please report it privatel
 
 ### How to Report
 
-Please report vulnerabilities by emailing the repository owner directly or using the [GitHub Private Vulnerability Reporting](https://github.com/petolapa/BloomPath/security/advisories/new) feature if enabled.
+Please report vulnerabilities by emailing the repository owner directly or using the [GitHub Private Vulnerability Reporting](https://github.com/petripaananen/BloomPath/security/advisories/new) feature if enabled.
 
 ### Response Timeline
 
