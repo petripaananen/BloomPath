@@ -88,8 +88,8 @@ def process_ticket_event(
             trigger_ue5_thorns,
             trigger_ue5_remove_thorns
         )
-    except ImportError:
-        logger.warning("UE5 interface not available")
+    except ImportError as e:
+        logger.warning(f"UE5 interface not available: {e}")
         return {"status": "ok", "action": "logged_only", "issue": ticket.id}
     
     growth_type = GROWTH_TYPE_MAP.get(ticket.issue_type, "leaf")
@@ -108,6 +108,10 @@ def process_ticket_event(
             # Trigger audio event
             _push_audio_event("task_completed", ticket.id, ticket.assignee_name)
             
+            # Social Layer: Celebration animation
+            if ticket.assignee_id:
+                avatar_manager.play_animation(ticket.assignee_id, "celebrate")
+            
             return {
                 "status": "growth_triggered",
                 "issue": ticket.id,
@@ -119,6 +123,10 @@ def process_ticket_event(
             trigger_ue5_shrink(ticket.id)
             _push_audio_event("task_reopened", ticket.id)
             
+            # Social Layer: Confused animation
+            if ticket.assignee_id:
+                avatar_manager.play_animation(ticket.assignee_id, "confused")
+            
             return {"status": "shrink_triggered", "issue": ticket.id}
         
         elif event_type == 'blocked':
@@ -126,12 +134,20 @@ def process_ticket_event(
             trigger_ue5_thorns(ticket.id, ticket.parent_id)
             _push_audio_event("blocker_added", ticket.id)
             
+            # Social Layer: Frustrated animation
+            if ticket.assignee_id:
+                avatar_manager.play_animation(ticket.assignee_id, "frustrated")
+            
             return {"status": "thorns_triggered", "issue": ticket.id}
         
         elif event_type == 'unblocked':
             # Issue unblocked -> Remove thorns
             trigger_ue5_remove_thorns(ticket.id)
             _push_audio_event("blocker_resolved", ticket.id)
+            
+            # Social Layer: Relieved animation
+            if ticket.assignee_id:
+                avatar_manager.play_animation(ticket.assignee_id, "relieved")
             
             return {"status": "thorns_removed", "issue": ticket.id}
         
@@ -149,20 +165,28 @@ def process_ticket_event(
             return {"status": "received", "action": "processed", "issue": ticket.id}
         
         elif event_type == 'queued_for_build':
-            # Issue moved to "To Do" - trigger PWM Pipeline
-            logger.info(f"🏗️ PWM Pipeline triggered for {ticket.id} (Queue)")
-            try:
-                from orchestrator import BloomPathOrchestrator
-                orchestrator = BloomPathOrchestrator()
-                orchestrator.process_ticket(ticket)
-            except Exception as ex:
-                logger.error(f"PWM Pipeline error: {ex}")
-            
-            return {"status": "pwm_triggered", "issue": ticket.id}
+            # Issue moved to "To Do"
+            return {"status": "received", "action": "queued", "issue": ticket.id}
         
         elif event_type == 'started':
-            # Issue moved to "In Progress" - log only for now
-            return {"status": "received", "action": "started", "issue": ticket.id}
+            # Social Layer: Working animation
+            if ticket.assignee_id:
+                avatar_manager.play_animation(ticket.assignee_id, "working")
+            
+            # Issue moved to "In Progress" - trigger PWM Pipeline only if labeled
+            if any(label in (ticket.labels or []) for label in ["WorldGen", "World Lab"]):
+                logger.info(f"🏗️ PWM Pipeline triggered for {ticket.id} (Started)")
+                try:
+                    from orchestrator import BloomPathOrchestrator
+                    orchestrator = BloomPathOrchestrator()
+                    orchestrator.process_ticket(ticket)
+                    return {"status": "pwm_triggered", "issue": ticket.id}
+                except Exception as ex:
+                    logger.error(f"PWM Pipeline error: {ex}")
+                    return {"status": "pwm_error", "issue": ticket.id, "error": str(ex)}
+            else:
+                logger.info(f"⏭️ Skipping PWM Pipeline for {ticket.id} (Missing WorldGen label)")
+                return {"status": "pwm_skipped", "issue": ticket.id}
         
         else:
             # General update
@@ -171,6 +195,45 @@ def process_ticket_event(
     except Exception as e:
         logger.error(f"UE5 action failed for {ticket.id}: {e}")
         return {"status": "ue5_error", "issue": ticket.id, "error": str(e)}
+    finally:
+        # Always update environmental dynamics after a ticket event
+        _update_environmental_dynamics(provider)
+
+
+def _update_environmental_dynamics(provider: IssueProvider) -> None:
+    """Calculates sprint health and pushes weather/time updates to UE5."""
+    try:
+        from ue5_interface import trigger_ue5_weather, trigger_ue5_time
+        sprint = provider.get_active_sprint_or_cycle()
+        if not sprint:
+            return
+            
+        sprint_id = sprint.get('id')
+        issues = provider.get_sprint_issues(sprint_id)
+        total = len(issues)
+        if total == 0:
+            return
+            
+        done = sum(1 for t in issues if t.status == IssueStatus.DONE)
+        blocked = sum(1 for t in issues if t.is_blocked)
+        
+        done_ratio = done / total
+        blocked_ratio = blocked / total
+        
+        if blocked_ratio > 0.2 or done_ratio < 0.3:
+            weather = "storm"
+        elif blocked_ratio > 0.1 or done_ratio < 0.6:
+            weather = "cloudy"
+        else:
+            weather = "sunny"
+            
+        progress = sprint.get('progress', done_ratio)
+        
+        trigger_ue5_weather(weather)
+        trigger_ue5_time(progress)
+        logger.info(f"⛅ Env Update: {weather}, time: {progress:.2f}")
+    except Exception as e:
+        logger.warning(f"Failed to update environmental dynamics: {e}")
 
 
 def _push_audio_event(

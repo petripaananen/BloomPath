@@ -3,7 +3,9 @@ import logging
 import time
 import json
 import os
+import requests
 from typing import Dict, Any, Optional
+from urllib.parse import urlparse
 
 from world_client import WorldLabsClient
 import semantic_analyzer
@@ -50,7 +52,8 @@ class BloomPathOrchestrator:
         return {
             "prompt": prompt,
             "mechanics": ", ".join(mechanics_list),
-            "issue_key": getattr(ticket, 'id', 'UNKNOWN')
+            "issue_key": getattr(ticket, 'id', 'UNKNOWN'),
+            "attachments": getattr(ticket, 'attachments', [])
         }
 
     def process_ticket(self, ticket: Any) -> Dict[str, Any]:
@@ -65,13 +68,56 @@ class BloomPathOrchestrator:
         logger.info(f"🎹 Orchestrator (Direct Mode) for {issue_key}: {intent['prompt']}")
         
         current_prompt = intent['prompt']
+        attachments = intent.get('attachments', [])
+        video_attachment = None
+        
+        # Look for the first video attachment
+        for att in attachments:
+            url = att.get("url", "")
+            title = att.get("title", "")
+            # Check both URL and Title (Linear upload URLs don't always have extensions)
+            target_strings = [url.lower(), title.lower()]
+            if any(ext in text for text in target_strings for ext in [".mp4", ".mov", ".webm"]):
+                video_attachment = att
+                break
         
         # 1. Spatial Synthesis (Marble AI)
         output_filename = f"{issue_key}_{int(time.time())}.gltf"
         output_path = os.path.join(os.getcwd(), "content", "generated", output_filename)
         
-        logger.info("  > Generating World via Matrix...")
-        generation_result = self.world_client.generate_world(current_prompt, output_path)
+        if video_attachment:
+            video_url = video_attachment["url"]
+            logger.info(f"  > Found Video Attachment: {video_url}")
+            
+            # Download the video locally first
+            temp_video_path = os.path.join(os.getcwd(), "content", "generated", f"temp_{issue_key}.mp4")
+            try:
+                logger.info(f"  > Downloading Video from Linear...")
+                v_resp = requests.get(video_url, stream=True, timeout=60)
+                v_resp.raise_for_status()
+                with open(temp_video_path, 'wb') as f:
+                    for chunk in v_resp.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                
+                logger.info("  > Generating World via Video Prompt...")
+                generation_result = self.world_client.generate_world_from_video(
+                    video_path=temp_video_path,
+                    text_prompt=current_prompt,
+                    output_path=output_path
+                )
+                
+                # Cleanup the temp downloaded video
+                if os.path.exists(temp_video_path):
+                    os.remove(temp_video_path)
+                    
+            except Exception as e:
+                logger.error(f"Failed to process video attachment: {e}")
+                logger.info("  > Falling back to text-only generation...")
+                generation_result = self.world_client.generate_world(current_prompt, output_path)
+                
+        else:
+            logger.info("  > Generating World via Text Prompt...")
+            generation_result = self.world_client.generate_world(current_prompt, output_path)
         
         if not generation_result:
             logger.error("  > World Generation Failed.")

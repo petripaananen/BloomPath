@@ -9,6 +9,7 @@ import os
 import hmac
 import hashlib
 import logging
+import re
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 
@@ -140,8 +141,12 @@ class LinearProvider(IssueProvider):
         """Extract relations from Linear issue data."""
         relations: List[Relation] = []
         
-        # Unified relations field
-        related_nodes = issue_data.get("relations", {}).get("nodes", [])
+        # Unified relations field (GraphQL has `{"nodes": []}`, Webhooks often just have a list)
+        related_data = issue_data.get("relations", [])
+        if isinstance(related_data, dict):
+            related_nodes = related_data.get("nodes", [])
+        else:
+            related_nodes = related_data
         
         for rel in related_nodes:
             rel_type = rel.get("type", "").lower()
@@ -167,8 +172,47 @@ class LinearProvider(IssueProvider):
     
     def _issue_to_ticket(self, issue: Dict[str, Any]) -> UnifiedTicket:
         """Convert a Linear issue to UnifiedTicket."""
-        labels_data = issue.get("labels", {}) or {}
-        labels = labels_data.get("nodes", [])
+        labels_data = issue.get("labels", []) or []
+        if isinstance(labels_data, dict):
+            labels = labels_data.get("nodes", [])
+        else:
+            labels = labels_data
+            
+        attachments_data = issue.get("attachments", []) or []
+        if isinstance(attachments_data, dict):
+            attachments_nodes = attachments_data.get("nodes", [])
+        else:
+            attachments_nodes = attachments_data
+            
+        attachments = []
+        for att in attachments_nodes:
+            if att and isinstance(att, dict):
+                url = att.get("url")
+                title = att.get("title")
+                subtitle = att.get("subtitle")
+                if url:
+                    attachments.append({
+                        "url": url,
+                        "title": title,
+                        "subtitle": subtitle
+                    })
+                    
+        description = issue.get("description") or ""
+        
+        # Extract markdown links for attachments embedded in the description
+        # Example: [video.mp4](https://uploads.linear.app/...)
+        md_links = re.findall(r'\[([^\]]+)\]\((https://uploads\.linear\.app/[^\)]+)\)', description)
+        for filename, url in md_links:
+            ext = filename.split('.')[-1].lower() if '.' in filename else ''
+            if ext in ['mp4', 'mov', 'webm', 'jpg', 'jpeg', 'png', 'webp']:
+                # Add if not already parsed
+                if not any(a.get("url") == url for a in attachments):
+                    attachments.append({
+                        "url": url,
+                        "title": filename,
+                        "subtitle": "Markdown Attachment"
+                    })
+            
         state = issue.get("state", {})
         assignee = issue.get("assignee") or {}
         cycle = issue.get("cycle") or {}
@@ -179,7 +223,7 @@ class LinearProvider(IssueProvider):
             id=issue.get("identifier", issue.get("id", "")),
             provider=self.name,
             title=issue.get("title", ""),
-            description=issue.get("description"),
+            description=description,
             status=self._normalize_status(state),
             issue_type=self._normalize_type(labels),
             priority=self._normalize_priority(issue.get("priority", 0)),
@@ -189,6 +233,7 @@ class LinearProvider(IssueProvider):
             parent_id=parent.get("identifier") or project.get("id"),
             relations=self._extract_relations(issue),
             labels=[l.get("name", "") for l in labels],
+            attachments=attachments,
             sprint_id=cycle.get("id"),
             sprint_name=cycle.get("name"),
             created_at=self._parse_datetime(issue.get("createdAt")),
@@ -243,6 +288,14 @@ class LinearProvider(IssueProvider):
                         type
                         relatedIssue { id identifier } 
                     } 
+                }
+                attachments {
+                    nodes {
+                        id
+                        url
+                        title
+                        subtitle
+                    }
                 }
                 children { nodes { id identifier } }
                 createdAt

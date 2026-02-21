@@ -81,6 +81,9 @@ class UnifiedTicket:
     # Categorization
     labels: List[str] = field(default_factory=list)
     
+    # Attachments (URLs to downloadable files)
+    attachments: List[dict] = field(default_factory=list)
+    
     # Sprint/Cycle
     sprint_id: Optional[str] = None
     sprint_name: Optional[str] = None
@@ -130,6 +133,7 @@ class UnifiedTicket:
                 for r in self.relations
             ],
             "labels": self.labels,
+            "attachments": self.attachments,
             "sprint": {
                 "id": self.sprint_id,
                 "name": self.sprint_name

@@ -73,7 +73,7 @@ class AvatarManager:
             if user.current_issue_id:
                 trigger_ue5_move_avatar(user_id, issue_id)
             else:
-                trigger_ue5_spawn_avatar(user_id, issue_id, user.name)
+                trigger_ue5_spawn_avatar(user_id, issue_id, user.name, user.avatar_url or "")
                 
             user.current_issue_id = issue_id
             
@@ -81,6 +81,30 @@ class AvatarManager:
             logger.warning("UE5 interface not available for avatar movement")
         except Exception as e:
             logger.error(f"Failed to move avatar for {user_id}: {e}")
+
+    def play_animation(self, user_id: str, animation_name: str, intensity: float = 1.0) -> None:
+        """
+        Play an animation on a user's gardener NPC avatar.
+        
+        Args:
+            user_id: The user whose avatar should animate.
+            animation_name: One of 'celebrate', 'frustrated', 'confused', 'working', 'relieved', 'idle'.
+            intensity: Animation intensity multiplier (0.0 - 1.0).
+        """
+        if user_id not in self.users:
+            logger.debug(f"Cannot animate unknown user {user_id}")
+            return
+            
+        user = self.users[user_id]
+        logger.info(f"🎭 Playing '{animation_name}' on {user.name}'s avatar")
+        
+        try:
+            from ue5_interface import trigger_ue5_avatar_animation
+            trigger_ue5_avatar_animation(user_id, animation_name, intensity)
+        except ImportError:
+            logger.warning("UE5 interface not available for avatar animation")
+        except Exception as e:
+            logger.error(f"Failed to play animation for {user_id}: {e}")
 
     def remove_avatar(self, user_id: str) -> None:
         """Despawn an avatar."""

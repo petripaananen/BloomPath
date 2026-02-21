@@ -83,11 +83,16 @@ class WorldLabsClient:
             logger.error(f"Image file not found: {image_path}")
             return None
         
-        # Determine file extension
+        # Determine file extension and kind
         ext = os.path.splitext(image_path)[1].lower().replace(".", "")
-        if ext not in ["jpg", "jpeg", "png", "webp"]:
-            logger.error(f"Unsupported image format: {ext}")
+        is_video = ext in ["mp4", "mov", "webm"]
+        is_image = ext in ["jpg", "jpeg", "png", "webp"]
+        
+        if not is_video and not is_image:
+            logger.error(f"Unsupported media format: {ext}")
             return None
+        
+        kind = "video" if is_video else "image"
         
         file_name = os.path.basename(image_path)
         
@@ -95,7 +100,7 @@ class WorldLabsClient:
             # 1. Prepare upload
             payload = {
                 "file_name": file_name,
-                "kind": "image",
+                "kind": kind,
                 "extension": ext if ext != "jpeg" else "jpg"
             }
             
@@ -206,6 +211,75 @@ class WorldLabsClient:
         # Use the same polling and download logic
         return self._poll_and_download(job_id, output_path)
 
+    def generate_world_from_video(
+        self, 
+        video_path: str, 
+        text_prompt: str,
+        output_path: str
+    ) -> Optional[Dict[str, str]]:
+        """
+        Generates a 3D world from a video and optional text prompt.
+        
+        Args:
+            video_path: Path to a local video file (mp4, mov, webm).
+            text_prompt: Additional text description to guide generation.
+            output_path: Local path to save the resulting mesh file.
+            
+        Returns:
+            Dict with 'mesh_path' and 'image_path' if successful, None otherwise.
+        """
+        if not self.api_key:
+            logger.error("Cannot generate world: Missing API Key")
+            return None
+        
+        # Upload the video first
+        media_asset_id = self._upload_media_asset(video_path)
+        if not media_asset_id:
+            return None
+        
+        # Request generation with video prompt
+        try:
+            payload = {
+                "display_name": f"BloomPath Video World - {int(time.time())}",
+                "world_prompt": {
+                    "type": "video",
+                    "video_prompt": {
+                        "source": "media_asset",
+                        "media_asset_id": media_asset_id
+                    },
+                    "text_prompt": text_prompt
+                }
+            }
+            
+            logger.info(f"Requesting world generation from video: '{os.path.basename(video_path)}'")
+            
+            response = requests.post(
+                f"{self.BASE_URL}/worlds:generate",
+                json=payload,
+                headers=self._get_headers(),
+                timeout=30
+            )
+            
+            if response.status_code != 200:
+                logger.error(f"Generate Request Failed: {response.text}")
+                response.raise_for_status()
+            
+            data = response.json()
+            job_id = data.get("operation_id")
+            
+            if not job_id:
+                logger.error("No operation_id returned from World Labs API")
+                return None
+            
+            logger.info(f"Video generation job started: {job_id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to start video generation: {e}")
+            return None
+        
+        # Use the same polling and download logic
+        return self._poll_and_download(job_id, output_path)
+
     def generate_world_from_url(
         self, 
         image_url: str, 
@@ -270,8 +344,8 @@ class WorldLabsClient:
         result_url = None
         thumbnail_url = None
         
-        # Poll loop (default 5 minutes)
-        for _ in range(60):
+        # Poll loop (180 iterations * 5 seconds = 15 minutes)
+        for _ in range(180):
             time.sleep(5)
             try:
                 check_resp = requests.get(

@@ -177,7 +177,7 @@ world = unreal.EditorLevelLibrary.get_editor_world()
 actors = unreal.GameplayStatics.get_all_actors_with_tag(world, "{UE5_ACTOR_TAG}")
 actor = actors[0] if actors else unreal.find_object(None, "{UE5_ACTOR_PATH}")
 if actor:
-    actor.Set_Weather("{weather}")
+    actor.SetWeather("{weather}")
 """
     return {"output": AGENT.execute_python(script)}
 
@@ -206,11 +206,43 @@ if actor:
 """
     return {"output": AGENT.execute_python(script)}
 
+# ── Avatar Animations (Social Layer) ────────────────────────────────
+
+AVATAR_ANIMATIONS = {
+    "celebrate": {"montage": "AM_Celebrate", "duration": 3.0},
+    "frustrated": {"montage": "AM_Frustrated", "duration": 2.5},
+    "confused":   {"montage": "AM_Confused",   "duration": 2.0},
+    "working":    {"montage": "AM_Working",    "duration": 0.0},  # looping
+    "relieved":   {"montage": "AM_Relieved",   "duration": 2.0},
+    "idle":       {"montage": "AM_Idle",       "duration": 0.0},  # looping
+}
+
+@retry_on_failure()
+def trigger_ue5_avatar_animation(
+    user_id: str,
+    animation_name: str,
+    intensity: float = 1.0
+) -> dict[str, Any]:
+    """Play an animation on a gardener NPC avatar."""
+    anim_data = AVATAR_ANIMATIONS.get(animation_name, AVATAR_ANIMATIONS["idle"])
+    montage = anim_data["montage"]
+    logger.info(f"🎭 Avatar animation: {animation_name} ({montage}) for {user_id}")
+    script = f"""
+import unreal
+world = unreal.EditorLevelLibrary.get_editor_world()
+actors = unreal.GameplayStatics.get_all_actors_with_tag(world, "{UE5_ACTOR_TAG}")
+actor = actors[0] if actors else unreal.find_object(None, "{UE5_ACTOR_PATH}")
+if actor:
+    actor.Play_Avatar_Animation("{user_id}", "{montage}", {intensity})
+"""
+    return {"output": AGENT.execute_python(script)}
+
+
 @retry_on_failure()
 def trigger_ue5_spawn_avatar(
     account_id: str,
+    target_issue_id: str,
     display_name: str,
-    position: dict[str, float],
     avatar_url: str = ""
 ) -> dict[str, Any]:
     logger.info(f"👤 Spawning avatar for {display_name}")
@@ -220,10 +252,8 @@ world = unreal.EditorLevelLibrary.get_editor_world()
 actors = unreal.GameplayStatics.get_all_actors_with_tag(world, "{UE5_ACTOR_TAG}")
 actor = actors[0] if actors else unreal.find_object(None, "{UE5_ACTOR_PATH}")
 if actor:
-    # Spawn_Avatar(Avatar_ID, Display_Name, PosX, PosY, PosZ, URL)
-    actor.Spawn_Avatar("{account_id}", "{display_name}", 
-        {position.get('x', 0.0)}, {position.get('y', 0.0)}, {position.get('z', 0.0)}, 
-        "{avatar_url}")
+    # UE5 Blueprint should be updated to use Spawn_Avatar_At_Issue or similar method that takes the issue ID
+    actor.Spawn_Avatar_At_Issue("{account_id}", "{display_name}", "{target_issue_id}", "{avatar_url}")
 """
     return {"output": AGENT.execute_python(script)}
 
@@ -264,13 +294,15 @@ if actor:
 @retry_on_failure()
 def trigger_ue5_load_level(file_path: str) -> dict[str, Any]:
     logger.info(f"🏗️ Loading generated level: {file_path}")
+    # Convert windows slashes to forward slashes for UE blueprint compatibility
+    ue_file_path = file_path.replace("\\", "/")
     script = f"""
 import unreal
 world = unreal.EditorLevelLibrary.get_editor_world()
 actors = unreal.GameplayStatics.get_all_actors_with_tag(world, "{UE5_ACTOR_TAG}")
 actor = actors[0] if actors else unreal.find_object(None, "{UE5_ACTOR_PATH}")
 if actor:
-    actor.Load_Generated_Level(r"{file_path}")
+    actor.Load_Generated_Level(r"{ue_file_path}")
 """
     return {"output": AGENT.execute_python(script)}
 
