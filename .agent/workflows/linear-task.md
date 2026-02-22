@@ -12,11 +12,13 @@ Create every new task in the **Backlog** column:
 
 ```
 Tool: mcp_linear-mcp-server_create_issue
-  team: "World Foundational Models"
-  project: "Garden Protocol"
+  team: "World Foundational Models"  # Mandatory
+  project: "Garden Protocol"         # Mandatory
+  assignee: "me"                     # Mandatory (assign to the user)
+  title: "<descriptive title>"       # Mandatory (topic)
+  description: "<markdown description with acceptance criteria>" # Mandatory
+  labels: ["<optional_label>"]       # Optional (but evaluated per issue)
   state: "Backlog"
-  title: "<descriptive title>"
-  description: "<markdown description with acceptance criteria>"
   priority: 1=Urgent, 2=High, 3=Normal, 4=Low
 ```
 
