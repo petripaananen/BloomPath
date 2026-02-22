@@ -247,6 +247,24 @@ def _update_environmental_dynamics(provider: IssueProvider) -> None:
         trigger_ue5_weather(weather)
         trigger_ue5_time(progress)
         logger.info(f"⛅ Env Update: {weather}, time: {progress:.2f}")
+        
+        # WFM-15: Evaluate and trigger Localized Storm Clouds for high-risk Epics
+        try:
+            from dreaming_engine import dreaming_engine
+            # We construct a lightweight dict matching the dreaming_engine's expectation
+            # rather than using the full `_build_sprint_data` from api.py to avoid circular imports.
+            issue_dicts = []
+            for t in issues:
+                issue_dicts.append({
+                    "id": t.id,
+                    "status": t.status.name.lower() if hasattr(t.status, 'name') else "unknown",
+                    "priority": t.priority,
+                    "epic": t.parent_id or "no_epic"
+                })
+            dreaming_engine.evaluate_dependency_risks({"issues": issue_dicts})
+        except Exception as e:
+            logger.warning(f"Failed to evaluate dependency risks for storm clouds: {e}")
+            
     except Exception as e:
         logger.warning(f"Failed to update environmental dynamics: {e}")
 

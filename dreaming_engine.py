@@ -477,6 +477,79 @@ Respond with ONLY the forecast text, no formatting or headers."""
 
         return triggered
 
+    # ── Passive Integration Risk (WFM-15) ────────────────────────────
+
+    def evaluate_dependency_risks(self, sprint_data: Dict[str, Any]) -> Dict[str, float]:
+        """
+        Evaluate passive integration/dependency risks grouped by Epic/Project zones.
+        
+        Args:
+            sprint_data: Dictionary containing issues with 'epic', 'status', 'priority'
+            
+        Returns:
+            Dict mapping zone_id -> risk_score (0.0 to 1.0)
+        """
+        zones = {}
+        issues = sprint_data.get("issues", [])
+        
+        # Group issues by their 'epic' or 'project_id' (using epic as the visual zone identifier)
+        for issue in issues:
+            zone_id = issue.get("epic", "no_epic")
+            if zone_id == "no_epic":
+                continue # Only care about localized tracked zones
+                
+            if zone_id not in zones:
+                zones[zone_id] = {"total": 0, "blocked": 0, "priority_weight": 0.0, "done": 0}
+                
+            zones[zone_id]["total"] += 1
+            
+            # Since linear maps "in_progress" or "todo", we treat strictly "blocked" if priority is high but incomplete,
+            # or we can rely on an explicit "blocked" attribute if we have it. The sprint_data dict currently
+            # only has 'status', 'priority'. We assume anything explicitly labeled 'blocked' in some setups,
+            # but here we'll simulate risk based on remaining high-priority work + standard completion ratio.
+            
+            status = issue.get("status", "unknown").lower()
+            priority = issue.get("priority", 3)
+            
+            if status == "done":
+                zones[zone_id]["done"] += 1
+            elif status == "blocked" or (status == "in_progress" and priority <= 2):
+                # Priority 1 (Highest) or 2 (High) that are sitting in progress, or anything explicitly blocked
+                zones[zone_id]["blocked"] += 1
+                zones[zone_id]["priority_weight"] += (6 - priority) # Priority 1 gives 5 weight
+
+        # Calculate localized storm intensity
+        storm_intensities = {}
+        for zone_id, stats in zones.items():
+            if stats["total"] == 0:
+                continue
+                
+            # Ratio of blocked/high-risk items to total items in zone
+            risk_ratio = stats["blocked"] / stats["total"]
+            
+            # Base risk is the ratio. We add a penalty if overall completion is low and there's high priority weight.
+            completion_ratio = stats["done"] / stats["total"]
+            
+            # If nothing is done and there's heavy blocked weight, risk approaches 1.0
+            complexity_punishment = min(0.5, (stats["priority_weight"] / max(1, stats["total"])) * 0.1)
+            
+            risk_score = min(1.0, risk_ratio + (0.5 - completion_ratio * 0.5) + complexity_punishment)
+            
+            # Only trigger storms for noticeable risk
+            if risk_score > 0.3:
+                storm_intensities[zone_id] = risk_score
+            else:
+                storm_intensities[zone_id] = 0.0 # Clear skies
+                
+        # Trigger the visual updates
+        try:
+            from ue5_interface import trigger_ue5_storm_cloud
+            for zone_id, intensity in storm_intensities.items():
+                trigger_ue5_storm_cloud(zone_id, intensity)
+        except Exception as e:
+            logger.warning(f"Failed to trigger UE5 storm clouds: {e}")
+
+        return storm_intensities
 
 # Module-level singleton
 dreaming_engine = DreamingEngine()
