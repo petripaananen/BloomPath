@@ -67,15 +67,7 @@ def process_ticket_event(
             avatar_manager.update_user_location(ticket.assignee_id, ticket.id)
 
             # Phase 5: Audio Intensity
-            # Calculate intensity based on active avatars (users working on an issue)
-            try:
-                from ue5_interface import trigger_ue5_ambience
-                active_users = sum(1 for u in avatar_manager.users.values() if u.current_issue_id)
-                # Map 0-5 users to 0.0-1.0 intensity
-                intensity = min(1.0, active_users / 5.0)
-                trigger_ue5_ambience(intensity)
-            except ImportError:
-                pass
+            # (Deprecated: Now driven by sprint health ratio via `update_sprint_audio_intensity` on webhook events)
             
     except Exception as e:
         logger.warning(f"Avatar/Audio update failed: {e}")
@@ -96,27 +88,40 @@ def process_ticket_event(
     growth_modifier = PRIORITY_MODIFIER_MAP.get(ticket.priority, 1.0)
     
     try:
-        if event_type == 'completed':
-            # Issue completed -> Grow plant
+        # Base action based on state change
+        if event_type in ['created', 'updated'] and ticket.status != IssueStatus.DONE:
+            logger.info(f"🌱 Growth triggered for {ticket.id} in zone {ticket.project_id}")
             trigger_ue5_growth(
                 branch_id=ticket.id,
                 growth_type=growth_type,
                 growth_modifier=growth_modifier,
-                epic_key=ticket.parent_id
+                project_id=ticket.project_id
+            )
+            
+            return {"status": "growing", "issue": ticket.id}
+        
+        elif event_type == 'completed':
+            logger.info(f"🌸 Blooming triggered for {ticket.id} in zone {ticket.project_id}")
+            # Social Layer: Celebrate animation
+            if ticket.assignee_id:
+                avatar_manager.play_animation(ticket.assignee_id, "celebrate")
+                
+            # Growth Layer: Bloom
+            trigger_ue5_growth(
+                branch_id=ticket.id,
+                growth_type=growth_type,
+                growth_modifier=growth_modifier,
+                project_id=ticket.project_id,
+                is_bloom=True
             )
             
             # Trigger audio event
             _push_audio_event("task_completed", ticket.id, ticket.assignee_name)
             
-            # Social Layer: Celebration animation
-            if ticket.assignee_id:
-                avatar_manager.play_animation(ticket.assignee_id, "celebrate")
+            # Recalculate and push ambient audio
+            update_sprint_audio_intensity(provider, ticket.sprint_id)
             
-            return {
-                "status": "growth_triggered",
-                "issue": ticket.id,
-                "growth_type": growth_type
-            }
+            return {"status": "bloomed", "issue": ticket.id}
         
         elif event_type == 'reopened':
             # Issue reopened -> Shrink plant
@@ -126,6 +131,9 @@ def process_ticket_event(
             # Social Layer: Confused animation
             if ticket.assignee_id:
                 avatar_manager.play_animation(ticket.assignee_id, "confused")
+                
+            # Recalculate and push ambient audio
+            update_sprint_audio_intensity(provider, ticket.sprint_id)
             
             return {"status": "shrink_triggered", "issue": ticket.id}
         
@@ -153,7 +161,7 @@ def process_ticket_event(
         
         elif event_type == 'created' or (event_type == 'updated' and growth_type in ['branch', 'trunk']):
             # New issue -> Check for WorldGen trigger to launch PWM Pipeline
-            if "WorldGen" in (ticket.labels or []):
+            if any(label in (ticket.labels or []) for label in ["WorldGen", "World Lab"]):
                 logger.info(f"✨ Triggering PWM Pipeline for {ticket.id}...")
                 try:
                     from orchestrator import BloomPathOrchestrator
@@ -255,6 +263,32 @@ def _push_audio_event(
         trigger_ue5_play_sound_2d(sound_name)
     except Exception as e:
         logger.warning(f"Failed to trigger audio for {event_type}: {e}")
+
+def update_sprint_audio_intensity(provider: IssueProvider, sprint_id: str) -> None:
+    """
+    Calculate the ratio of completed tasks in the current sprint 
+    and push the new ambient audio volume to UE5.
+    """
+    if not sprint_id:
+        return
+        
+    try:
+        issues = provider.get_sprint_issues(sprint_id)
+        if not issues:
+            return
+            
+        done_count = sum(1 for issue in issues if issue.status == IssueStatus.DONE)
+        total_count = len(issues)
+        
+        # Linear/Jira ratio mapping (e.g. 10 done tasks = max birdsong)
+        # 10 is an arbitrary high-productivity cap per sprint
+        intensity = min(1.0, done_count / 10.0)
+        
+        from ue5_interface import trigger_ue5_ambient_audio
+        trigger_ue5_ambient_audio(intensity)
+        logger.info(f"Updated sprint audio intensity to: {intensity} ({done_count}/{total_count} issues done)")
+    except Exception as e:
+        logger.warning(f"Failed to update sprint audio intensity: {e}")
 
 
 def process_dependencies_visualization(ticket: UnifiedTicket) -> None:

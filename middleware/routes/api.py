@@ -164,6 +164,62 @@ def complete_task():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+@api_bp.route('/sync', methods=['POST'])
+def sync_sprint_data():
+    """
+    Manually trigger a sync of active sprint data to UE5.
+    
+    This endpoint fetches all issues from the active sprint/cycle
+    and pushes them through the orchestrator to ensure UE5 has
+    the latest state.
+    
+    Query params:
+    - provider: 'jira' or 'linear' (default: jira)
+    """
+    from middleware.orchestrator import orchestrator
+    from middleware.core import update_sprint_audio_intensity
+    
+    provider_name = request.args.get('provider')
+    provider = _get_provider(provider_name)
+    
+    logger.info(f"🔄 Starting manual sync for {provider.name}")
+    
+    try:
+        sprint = provider.get_active_sprint_or_cycle()
+        if not sprint:
+            return jsonify({
+                "status": "no_sprint",
+                "message": f"No active sprint found for {provider.name}"
+            }), 200
+            
+        sprint_id = sprint.get('id')
+        issues = provider.get_sprint_issues(sprint_id)
+        
+        logger.info(f"Syncing {len(issues)} issues from active sprint")
+        
+        # Process each issue through the pipeline
+        processed = 0
+        for ticket in issues:
+            # We treat full sync as 'created' to ensure they spawn
+            # The UE5 layer should handle idempotency (not spawning duplicates)
+            orchestrator.process_ticket(ticket, {"type": "created"}, provider)
+            processed += 1
+            
+        # Update baseline ambient audio for the sprint
+        update_sprint_audio_intensity(provider, sprint_id)
+            
+        return jsonify({
+            "status": "success",
+            "provider": provider.name,
+            "sprint_name": sprint.get('name'),
+            "issues_synced": processed
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Failed to sync sprint data: {e}", exc_info=True)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @api_bp.route('/team_members', methods=['GET'])
 def team_members():
     """

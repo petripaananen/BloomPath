@@ -86,17 +86,22 @@ def trigger_ue5_growth(
     branch_id: str,
     growth_type: str = "leaf",
     growth_modifier: float = 1.0,
-    color: Optional[dict[str, float]] = None,
-    epic_key: Optional[str] = None
+    project_id: Optional[str] = None,
+    is_bloom: bool = False
 ) -> dict[str, Any]:
-    if color is None:
-        color = PRIORITY_COLORS.get("Medium")
-        
-    c_r = color.get('R', 0.3)
-    c_g = color.get('G', 0.8)
-    c_b = color.get('B', 0.3)
-
-    logger.info(f"Triggering UE5 growth: {branch_id}")
+    """
+    Trigger growth visualization in UE5 using the python remote API.
+    
+    Args:
+        branch_id: The issue identifier (e.g., KAN-123)
+        growth_type: 'leaf', 'flower', 'branch', 'trunk', 'fruit'
+        growth_modifier: Multiplier for growth amount based on priority
+        project_id: The project zone to grow in
+        is_bloom: If True, specifically bloom existing plant
+    """
+    logger.info(f"Triggering UE5 {'bloom' if is_bloom else 'growth'}: {branch_id} ({growth_type}) in {project_id}")
+    
+    c_r, c_g, c_b = TYPE_COLOR_MAP.get(growth_type, TYPE_COLOR_MAP["leaf"])
     
     script = f"""
 import unreal
@@ -109,14 +114,14 @@ if actor:
     # Note: We construct the dictionary string manually for the embedded script
     # c_r, c_g, c_b are Python variables here, we insert their VALUES into the script string
     # Verified Positional Signature (6 args): 
-    # (branch_id: str, r: float, g: float, b: float, epic_id: str, growth_modifier: float)
+    # (branch_id: str, r: float, g: float, b: float, project_id: str, growth_modifier: float)
     # Note: growth_type is implicit in the function name "Grow_Leaves"
     actor.call_method("Grow_Leaves", (
         "{branch_id}", 
         {c_r}, 
         {c_g}, 
         {c_b}, 
-        "{epic_key or ''}", 
+        "{project_id or ''}", 
         {growth_modifier}
     ))
     print("Success")
