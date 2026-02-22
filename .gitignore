@@ -11,3 +11,14 @@ venv/
 # Documentation to keep local only
 docs/Thesis_context.md
 docs/bloompath-thesis-review.md
+
+# Unreal Engine 5
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+.vs/
+*.sln
+.vsconfig
+UpgradeLog.htm
+content/generated/

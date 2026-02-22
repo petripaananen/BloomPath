@@ -12,7 +12,7 @@ class SpecialAgentClient:
     Uses HTTP/SSE for transport (Synchronous version for Flask compatibility).
     """
     
-    def __init__(self, base_url: str = "http://localhost:8767"):
+    def __init__(self, base_url: str = "http://localhost:8768"):
         self.base_url = base_url.rstrip("/")
         self.sse_url = f"{self.base_url}/sse"
         self.session_id_url: Optional[str] = None
@@ -109,7 +109,7 @@ class SpecialAgentClient:
         Returns the stdout/result.
         """
         # The parameter name defined in PythonService.cpp is 'code'
-        result = self.call_tool("python/execute", {"code": code})
+        result = self.call_tool("execute_python", {"code": code})
         
         # Parse result text from content block
         content = result.get("content", [])

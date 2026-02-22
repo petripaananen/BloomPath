@@ -114,7 +114,8 @@ def analyze_world(image_path: str) -> Optional[Dict[str, Any]]:
         }],
         "generationConfig": {
             "temperature": 0.2,
-            "maxOutputTokens": 2048
+            "maxOutputTokens": 2048,
+            "responseMimeType": "application/json"
         }
     }
     
@@ -143,7 +144,15 @@ def analyze_world(image_path: str) -> Optional[Dict[str, Any]]:
             lines = json_str.split("\n")
             json_str = "\n".join(lines[1:-1])
         
-        manifest = json.loads(json_str)
+        try:
+            manifest = json.loads(json_str)
+        except json.JSONDecodeError as e:
+            logger.warning(f"Standard JSON parse failed, attempting fallback: {e}")
+            import re
+            # Try to fix trailing commas
+            fixed_json = re.sub(r',\s*([\]}])', r'\1', json_str)
+            manifest = json.loads(fixed_json)
+
         logger.info(f"✅ Identified {len(manifest.get('objects', []))} objects")
         return manifest
         
