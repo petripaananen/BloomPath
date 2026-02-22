@@ -57,6 +57,7 @@ class UnifiedTicket:
     # Core identifiers
     id: str                             # e.g., "KAN-123" or "LIN-abc123"
     provider: str                       # "jira" or "linear"
+    project_id: str                     # Which project/team ecosystem this belongs to
     
     # Content
     title: str
@@ -139,5 +140,6 @@ class UnifiedTicket:
                 "name": self.sprint_name
             } if self.sprint_id else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "project_id": self.project_id
         }

@@ -464,6 +464,60 @@ if actor:
     return {"output": AGENT.execute_python(script)}
 
 
+@retry_on_failure()
+def trigger_ue5_scrub_timeline(reconstructed_tickets: list) -> dict[str, Any]:
+    """
+    Clears the UE5 garden and rebuilds it instantly using the BATCHER based on a historical list of tickets.
+    """
+    logger.info(f"⏪ Scrubbing timeline: rebuilding {len(reconstructed_tickets)} historical elements...")
+    
+    # First, let's reset the garden synchronously so it's clean before we batch spawn
+    trigger_ue5_reset_garden()
+    
+    BATCHER.clear()
+    BATCHER.add("import unreal")
+    BATCHER.add("world = unreal.EditorLevelLibrary.get_editor_world()")
+    BATCHER.add(f"actors = unreal.GameplayStatics.get_all_actors_with_tag(world, '{UE5_ACTOR_TAG}')")
+    BATCHER.add(f"actor = actors[0] if actors else unreal.find_object(None, '{UE5_ACTOR_PATH}')")
+    BATCHER.add("if actor:")
+    
+    for ticket in reconstructed_tickets:
+        from middleware.models.ticket import IssueStatus, IssueType
+        
+        # We need to map the raw ticket data to the appropriate UE5 Spawn commands
+        # Re-using the logic from core.py
+        growth_type_map = {
+            IssueType.EPIC: "trunk",
+            IssueType.FEATURE: "branch",
+            IssueType.BUG: "flower",
+            IssueType.TASK: "leaf",
+            IssueType.CHORE: "bud",
+        }
+        growth_type = growth_type_map.get(ticket.issue_type, "leaf")
+        
+        priority_map = {5: 2.0, 4: 1.5, 3: 1.0, 2: 0.75, 1: 0.5}
+        growth_mod = priority_map.get(ticket.priority, 1.0)
+        
+        pid = ticket.project_id if ticket.project_id else ""
+        
+        # Did it bloom historically?
+        is_bloom = ticket.status == IssueStatus.DONE
+        
+        # Did it have thorns historically?
+        # A ticket has thorns if the last event was "blocked".
+        # If it was completed, or just created, it has no thorns.
+        # This is a bit of an assumption based on the timeline row.
+        last_event = getattr(ticket, '_last_historical_event', 'updated')
+        
+        # Sub-commands added to batch buffer with correct indentation
+        BATCHER.add(f"    actor.Trigger_Growth('{ticket.id}', '{growth_type}', {growth_mod}, '{pid}', {str(is_bloom).lower()})")
+        
+        if last_event == 'blocked':
+            BATCHER.add(f"    actor.Add_Thorns('{ticket.id}', '{ticket.parent_id or ''}')")
+            
+    return BATCHER.flush()
+
+
 # ── Ghost Garden (Dreaming Engine) ──────────────────────────────────
 
 

@@ -265,7 +265,41 @@ def team_members():
         }), 200
         
     except Exception as e:
-        logger.error(f"Error getting team members: {e}", exc_info=True)
+        logger.error(f"Failed to fetch team members: {e}", exc_info=True)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@api_bp.route('/timeline/scrub', methods=['POST'])
+def scrub_timeline():
+    """
+    Scrub the UE5 garden state to a specific historical timestamp.
+    
+    Accepts JSON:
+    {
+      "timestamp": 1720000000.0
+    }
+    """
+    data = request.json or {}
+    target_timestamp = data.get('timestamp')
+    
+    if not target_timestamp:
+        return jsonify({"status": "error", "message": "Missing 'timestamp' in payload"}), 400
+        
+    try:
+        from middleware.timeline_cache import timeline_cache
+        from ue5_interface import trigger_ue5_scrub_timeline
+        
+        historical_state = timeline_cache.get_state_at_timestamp(float(target_timestamp))
+        trigger_ue5_scrub_timeline(historical_state)
+        
+        return jsonify({
+            "status": "success",
+            "timestamp_scrubbed_to": target_timestamp,
+            "items_reconstructed": len(historical_state)
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Failed to scrub timeline: {e}", exc_info=True)
         return jsonify({"status": "error", "message": str(e)}), 500
 
 

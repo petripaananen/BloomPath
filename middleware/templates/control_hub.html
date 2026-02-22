@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BloomPath | Scenario Strategist</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #09090b;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-emerald: #10b981;
+            --accent-purple: #8b5cf6;
+            --accent-blue: #3b82f6;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(139, 92, 246, 0.08), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.08), transparent 25%);
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        header {
+            padding: 2rem 4rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--glass-border);
+            background: rgba(9, 9, 11, 0.8);
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent-emerald), var(--accent-blue));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            background: linear-gradient(to right, #fff, #cbd5e1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            background: var(--glass-bg);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .pulse {
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent-emerald);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--accent-emerald);
+            animation: pulse-anim 2s infinite;
+        }
+
+        @keyframes pulse-anim {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        main {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 2rem;
+            padding: 2rem 4rem;
+            flex: 1;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .glass-panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+        }
+
+        h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.25rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        select, input[type="number"], input[type="text"] {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.875rem;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        select:focus, input:focus {
+            border-color: var(--accent-purple);
+            box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+        }
+
+        select option {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+        }
+
+        .dynamic-params {
+            padding: 1rem;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            border: 1px dashed var(--glass-border);
+            margin-bottom: 1.5rem;
+            min-height: 150px;
+        }
+
+        button.primary {
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            margin-top: auto;
+        }
+
+        button.primary::after {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 50%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transform: skewX(-20deg);
+            transition: all 0.5s ease;
+        }
+
+        button.primary:hover::after {
+            left: 150%;
+        }
+
+        button.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(139, 92, 246, 0.3);
+        }
+
+        button.primary:active {
+            transform: translateY(0);
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        @keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+
+        /* History List */
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            overflow-y: auto;
+            padding-right: 0.5rem;
+        }
+
+        .history-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        .history-list::-webkit-scrollbar-thumb {
+            background: var(--glass-border);
+            border-radius: 3px;
+        }
+
+        .history-item {
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .history-item:hover {
+            border-color: rgba(255,255,255,0.2);
+            transform: translateX(4px);
+        }
+
+        .history-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .history-type {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            color: var(--accent-emerald);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .history-type::before {
+            content: '♦';
+            font-size: 0.8em;
+        }
+
+        .history-type.resource_stress { color: var(--warning); }
+        .history-type.scope_creep { color: var(--danger); }
+        .history-type.priority_shift { color: var(--accent-blue); }
+
+        .history-time {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .history-risk {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: rgba(255,255,255,0.05);
+        }
+
+        .risk-low { color: var(--accent-emerald); border: 1px solid rgba(16, 185, 129, 0.3); }
+        .risk-medium { color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.3); }
+        .risk-high { color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); }
+
+        .history-summary {
+            font-size: 0.875rem;
+            line-height: 1.5;
+            color: #cbd5e1;
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        /* Error Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            z-index: 1000;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-area">
+            <div class="logo-icon">B</div>
+            <h1>Scenario Strategist</h1>
+        </div>
+        <div class="status-indicator">
+            <div class="pulse"></div>
+            Middleware Connected
+        </div>
+    </header>
+
+    <main>
+        <!-- Configuration Panel -->
+        <div class="glass-panel">
+            <h2>✨ Dream Configuration</h2>
+            
+            <div class="form-group">
+                <label for="scenarioSelector">Scenario Type</label>
+                <select id="scenarioSelector">
+                    <option value="resource_stress">Resource Stress (Team Member Loss)</option>
+                    <option value="scope_creep">Scope Creep (Mid-Sprint Additions)</option>
+                    <option value="priority_shift">Priority Shift (Reallocation)</option>
+                </select>
+            </div>
+
+            <div class="dynamic-params" id="paramsContainer">
+                <!-- Dynamically populated via JS -->
+            </div>
+
+            <button class="primary" id="btnSimulate">
+                Simulate Dream
+                <div class="spinner" id="btnSpinner"></div>
+            </button>
+        </div>
+
+        <!-- History Panel -->
+        <div class="glass-panel">
+            <h2>📜 Dream Records</h2>
+            <div class="history-list" id="historyList">
+                <!-- Populated via JS -->
+                <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                    Loading records...
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="toast" id="toast">Error occurred.</div>
+
+    <script>
+        const API_BASE = window.location.origin;
+
+        const SCENARIOS = {
+            'resource_stress': [
+                { id: 'remove_count', label: 'Members to Remove', type: 'number', default: 1, min: 1, max: 10 }
+            ],
+            'scope_creep': [
+                { id: 'additional_issues', label: 'Additional Issues (Count)', type: 'number', default: 5, min: 1, max: 50 },
+                { id: 'priority', label: 'Average Priority (1-4)', type: 'number', default: 2, min: 1, max: 4 }
+            ],
+            'priority_shift': [
+                { id: 'target_epic', label: 'Target Epic (Optional ID)', type: 'text', default: '', placeholder: 'e.g. LIN-12' },
+                { id: 'shift_percentage', label: 'Shift Percentage (%)', type: 'number', default: 30, min: 10, max: 100 }
+            ]
+        };
+
+        const scenarioSelector = document.getElementById('scenarioSelector');
+        const paramsContainer = document.getElementById('paramsContainer');
+        const btnSimulate = document.getElementById('btnSimulate');
+        const btnSpinner = document.getElementById('btnSpinner');
+        const historyList = document.getElementById('historyList');
+        const toast = document.getElementById('toast');
+
+        function showToast(msg) {
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function formatType(typeStr) {
+            return typeStr.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        }
+
+        function getRiskClass(score) {
+            if (score < 0.3) return 'risk-low';
+            if (score < 0.7) return 'risk-medium';
+            return 'risk-high';
+        }
+
+        function renderParams() {
+            const type = scenarioSelector.value;
+            const fields = SCENARIOS[type] || [];
+            
+            paramsContainer.innerHTML = '';
+            
+            if (fields.length === 0) {
+                paramsContainer.innerHTML = '<p style="color:var(--text-secondary);font-size:0.875rem;">No parameters required.</p>';
+                return;
+            }
+
+            fields.forEach(f => {
+                const group = document.createElement('div');
+                group.className = 'form-group';
+                
+                const label = document.createElement('label');
+                label.htmlFor = `param_${f.id}`;
+                label.textContent = f.label;
+                
+                const input = document.createElement('input');
+                input.type = f.type;
+                input.id = `param_${f.id}`;
+                input.value = f.default;
+                if (f.placeholder) input.placeholder = f.placeholder;
+                if (f.min !== undefined) input.min = f.min;
+                if (f.max !== undefined) input.max = f.max;
+
+                group.appendChild(label);
+                group.appendChild(input);
+                paramsContainer.appendChild(group);
+            });
+        }
+
+        async function fetchHistory() {
+            try {
+                const res = await fetch(`${API_BASE}/dreams`);
+                const data = await res.json();
+                
+                if (data.status === 'ok') {
+                    historyList.innerHTML = '';
+                    if (data.dreams.length === 0) {
+                        historyList.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-secondary);">No dreams recorded yet.</div>';
+                        return;
+                    }
+
+                    data.dreams.forEach(d => {
+                        const date = new Date(d.timestamp * 1000).toLocaleString();
+                        const riskClass = getRiskClass(d.risk_score);
+                        const riskPercent = Math.round(d.risk_score * 100);
+
+                        const html = `
+                            <div class="history-item">
+                                <div class="history-item-header">
+                                    <div class="history-type ${d.scenario_type}">${formatType(d.scenario_type)}</div>
+                                    <div class="history-time">${date}</div>
+                                </div>
+                                <div>
+                                    <span class="history-risk ${riskClass}">Risk: ${riskPercent}%</span>
+                                </div>
+                                <div class="history-summary">${d.impact_summary || 'No forecast summary generated.'}</div>
+                            </div>
+                        `;
+                        historyList.insertAdjacentHTML('beforeend', html);
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to fetch history:", err);
+            }
+        }
+
+        async function simulateDream() {
+            const type = scenarioSelector.value;
+            const fields = SCENARIOS[type] || [];
+            
+            const params = {};
+            fields.forEach(f => {
+                const val = document.getElementById(`param_${f.id}`).value;
+                params[f.id] = f.type === 'number' ? Number(val) : val;
+                
+                // Cleanup empty optional strings
+                if (f.type === 'text' && val.trim() === '') {
+                    delete params[f.id];
+                }
+            });
+
+            const payload = {
+                scenario: type,
+                params: params,
+                visualize: true
+            };
+
+            btnSimulate.disabled = true;
+            btnSpinner.style.display = 'block';
+
+            try {
+                const res = await fetch(`${API_BASE}/dream`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+                if (data.status !== 'ok') {
+                    throw new Error(data.message || 'Simulation failed');
+                }
+
+                await fetchHistory();
+            } catch (err) {
+                showToast(err.message);
+                console.error(err);
+            } finally {
+                btnSimulate.disabled = false;
+                btnSpinner.style.display = 'none';
+            }
+        }
+
+        // Init
+        scenarioSelector.addEventListener('change', renderParams);
+        btnSimulate.addEventListener('click', simulateDream);
+
+        // Initial render
+        renderParams();
+        fetchHistory();
+
+        // Refresh history periodically
+        setInterval(fetchHistory, 15000);
+
+    </script>
+</body>
+</html>

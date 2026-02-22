@@ -68,8 +68,15 @@ class LinearProvider(IssueProvider):
     ):
         self.api_key = api_key or os.getenv("LINEAR_API_KEY")
         self.webhook_secret = webhook_secret or os.getenv("LINEAR_WEBHOOK_SECRET")
-        self.team_id = team_id or os.getenv("LINEAR_TEAM_ID")
         
+        # Support multiple teams (WFM-14)
+        env_team_ids = os.getenv("LINEAR_TEAM_IDS", "")
+        if env_team_ids:
+            self.team_ids = [t.strip() for t in env_team_ids.split(",") if t.strip()]
+        else:
+            legacy_team = team_id or os.getenv("LINEAR_TEAM_ID")
+            self.team_ids = [legacy_team] if legacy_team else []
+            
         if not self.api_key:
             logger.warning("Linear API key not configured")
     
@@ -222,6 +229,7 @@ class LinearProvider(IssueProvider):
         return UnifiedTicket(
             id=issue.get("identifier", issue.get("id", "")),
             provider=self.name,
+            project_id=project.get("id") or (self.team_ids[0] if self.team_ids else "default"),
             title=issue.get("title", ""),
             description=description,
             status=self._normalize_status(state),
@@ -314,7 +322,7 @@ class LinearProvider(IssueProvider):
         return self._issue_to_ticket(issue)
     
     def get_active_sprint_or_cycle(self) -> Optional[Dict[str, Any]]:
-        """Get the currently active cycle from Linear."""
+        """Get the most active cycle across all teams from Linear."""
         query = """
         query GetActiveCycle($teamId: String!) {
             team(id: $teamId) {
@@ -329,12 +337,22 @@ class LinearProvider(IssueProvider):
         }
         """
         
-        if not self.team_id:
-            logger.warning("LINEAR_TEAM_ID not configured")
+        if not self.team_ids:
+            logger.warning("LINEAR_TEAM_IDS not configured")
             return None
         
-        result = self._execute_query(query, {"teamId": self.team_id})
-        return result.get("team", {}).get("activeCycle")
+        # In a real multi-project scenario, we might want to return a list of active cycles
+        # Currently the interface get_active_sprint_or_cycle implies returning one.
+        # Let's return the first found for now to satisfy the interface.
+        for team_id in self.team_ids:
+            result = self._execute_query(query, {"teamId": team_id})
+            cycle = result.get("team", {}).get("activeCycle")
+            if cycle:
+                # Store the team_id on the cycle so we know where it came from if needed
+                cycle["team_id"] = team_id
+                return cycle
+                
+        return None
     
     def get_sprint_issues(self, sprint_id: str) -> List[UnifiedTicket]:
         """Get all issues in a cycle."""

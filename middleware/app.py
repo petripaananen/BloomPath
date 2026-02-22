@@ -9,7 +9,7 @@ import os
 import logging
 from flask import Flask
 
-from middleware.routes import webhooks_bp, api_bp
+from middleware.routes import webhooks_bp, api_bp, ui_bp
 
 
 def create_app(config: dict = None) -> Flask:
@@ -44,6 +44,7 @@ def create_app(config: dict = None) -> Flask:
     # Register blueprints
     app.register_blueprint(webhooks_bp)
     app.register_blueprint(api_bp)
+    app.register_blueprint(ui_bp)
     
     # Legacy route compatibility (redirect /webhook to /webhooks/jira)
     @app.route('/webhook', methods=['POST'])
@@ -79,6 +80,7 @@ if __name__ == '__main__':
     ║    • POST /complete_task   - UE5 → Done transition            ║
     ║    • GET  /team_members    - Team member list                 ║
     ║    • GET  /dependencies/<id> - Issue dependencies             ║
+    ║    • GET  /hub               - AI Scenarios Control Hub       ║
     ╚═══════════════════════════════════════════════════════════════╝
     """)
     

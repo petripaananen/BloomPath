@@ -88,6 +88,14 @@ class JiraProvider(IssueProvider):
         self.api_token = api_token or os.getenv("JIRA_API_TOKEN")
         self.board_id = board_id or os.getenv("JIRA_BOARD_ID")
         
+        # Support multiple projects (WFM-14)
+        env_project_keys = os.getenv("JIRA_PROJECT_KEYS", "")
+        if env_project_keys:
+            self.project_keys = [k.strip() for k in env_project_keys.split(",") if k.strip()]
+        else:
+            legacy_key = os.getenv("JIRA_PROJECT_KEY")
+            self.project_keys = [legacy_key] if legacy_key else []
+        
         if not all([self.domain, self.email, self.api_token]):
             logger.warning("Jira credentials not fully configured")
     
@@ -203,6 +211,7 @@ class JiraProvider(IssueProvider):
         return UnifiedTicket(
             id=issue.get('key', ''),
             provider=self.name,
+            project_id=issue.get('key', '').split('-')[0] if '-' in issue.get('key', '') else (self.project_keys[0] if self.project_keys else "default"),
             title=fields.get('summary', ''),
             description=fields.get('description'),
             status=self._normalize_status(

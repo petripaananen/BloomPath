@@ -50,6 +50,13 @@ def process_ticket_event(
     """
     event_type = event_info.get('event_type', 'updated')
     
+    # Timeline History Logging (WFM-13)
+    try:
+        from middleware.timeline_cache import timeline_cache
+        timeline_cache.log_event(event_type, ticket)
+    except Exception as e:
+        logger.warning(f"Failed to log timeline event: {e}")
+        
     logger.info(f"🎫 Processing {ticket.id} ({ticket.provider}): {event_type}")
 
     # Social Layer: Manage Avatars
