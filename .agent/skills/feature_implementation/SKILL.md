@@ -32,7 +32,8 @@ Use this skill whenever the user asks for a feature that requires planning, codi
     - Include "What was changed" and "How to verify".
 - [ ] **Git Operations**:
     - `git add <files>`
-    - `git commit -m "feat: <description>"`
+    - `pre-commit run --all-files` (Optional: verify no secrets or issues before committing)
+    - `git commit -m "feat: <description>"` (Note: A Gitleaks pre-commit hook is active. It will reject commits with hardcoded secrets).
     - `git push`
 
 ## 5. Completion
