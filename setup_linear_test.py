@@ -6,7 +6,7 @@ import time
 # Configuration
 API_KEY = os.environ.get("LINEAR_API_KEY")
 TEAM_ID = os.environ.get("LINEAR_TEAM_ID")
-PROJECT_NAME = "Garden Protocol"
+PROJECT_NAME = "Project World Model"
 GRAPHQL_URL = "https://api.linear.app/graphql"
 
 if not API_KEY or not TEAM_ID:

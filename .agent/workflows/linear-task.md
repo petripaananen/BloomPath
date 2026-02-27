@@ -1,10 +1,10 @@
 ---
-description: How to create and manage Linear tasks for the Garden Protocol project
+description: How to create and manage Linear tasks for the Project World Model project
 ---
 
 # Linear Task Management Workflow
 
-All tasks for BloomPath live in the **Garden Protocol** project under the **World Foundational Models** team in Linear.
+All tasks for BloomPath live in the **Project World Model** project under the **World Foundational Models** team in Linear.
 
 ## 1. Create Task → Backlog
 
@@ -13,7 +13,7 @@ Create every new task in the **Backlog** column:
 ```
 Tool: mcp_linear-mcp-server_create_issue
   team: "World Foundational Models"  # Mandatory
-  project: "Garden Protocol"         # Mandatory
+  project: "Project World Model"         # Mandatory
   assignee: "me"                     # Mandatory (assign to the user)
   title: "<descriptive title>"       # Mandatory (topic)
   description: "<markdown description with acceptance criteria>" # Mandatory
@@ -90,6 +90,6 @@ Tool: mcp_linear-mcp-server_update_issue
 Backlog → Todo → In Progress → In Review → Done
 ```
 
-**Linear project**: Garden Protocol  
+**Linear project**: Project World Model  
 **Linear team**: World Foundational Models  
 **Available statuses**: Backlog, Todo, In Progress, In Review, Done, Canceled, Duplicate
