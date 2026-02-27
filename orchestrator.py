@@ -53,7 +53,8 @@ class BloomPathOrchestrator:
             "prompt": prompt,
             "mechanics": ", ".join(mechanics_list),
             "issue_key": getattr(ticket, 'id', 'UNKNOWN'),
-            "attachments": getattr(ticket, 'attachments', [])
+            "attachments": getattr(ticket, 'attachments', []),
+            "is_ue5_interactive": "ue5" in label_set,
         }
 
     def process_ticket(self, ticket: Any) -> Dict[str, Any]:
@@ -64,6 +65,7 @@ class BloomPathOrchestrator:
         start_time = time.time()
         intent = self.parse_intent(ticket)
         issue_key = intent['issue_key']
+        is_ue5_interactive = intent.get('is_ue5_interactive', False)
         
         logger.info(f"🎹 Orchestrator (Direct Mode) for {issue_key}: {intent['prompt']}")
         
@@ -81,70 +83,97 @@ class BloomPathOrchestrator:
                 video_attachment = att
                 break
         
-        # 1. Spatial Synthesis (Marble AI)
+        # 1. Spatial Synthesis OR Interactive Placement
         output_filename = f"{issue_key}_{int(time.time())}.gltf"
         output_path = os.path.join(os.getcwd(), "content", "generated", output_filename)
         
-        if video_attachment:
-            video_url = video_attachment["url"]
-            logger.info(f"  > Found Video Attachment: {video_url}")
+        mesh_path = None
+        manifest = None
+        
+        if is_ue5_interactive:
+            # OPTION A: UE5 Interactive placement workflow
+            logger.info("  > UE5 Label detected. Executing Procedural Interactive Placement.")
             
-            # Download the video locally first
-            temp_video_path = os.path.join(os.getcwd(), "content", "generated", f"temp_{issue_key}.mp4")
+            # Use intent title as the item description/class
+            item_description = getattr(ticket, 'title', 'UnknownItem')
+            
+            # Ideally, we look up the latest generated manifest to find a surface.
+            # In a full system, you'd track the current loaded manifest in state.
+            # For now, we simulate finding a surface target.
+            semantic_target = "CounterTop" 
+            
             try:
-                logger.info(f"  > Downloading Video from Linear...")
-                v_resp = requests.get(video_url, stream=True, timeout=60)
-                v_resp.raise_for_status()
-                with open(temp_video_path, 'wb') as f:
-                    for chunk in v_resp.iter_content(chunk_size=8192):
-                        f.write(chunk)
-                
-                logger.info("  > Generating World via Video Prompt...")
-                generation_result = self.world_client.generate_world_from_video(
-                    video_path=temp_video_path,
-                    text_prompt=current_prompt,
-                    output_path=output_path
-                )
-                
-                # Cleanup the temp downloaded video
-                if os.path.exists(temp_video_path):
-                    os.remove(temp_video_path)
-                    
+                from ue5_interface import trigger_ue5_spawn_interactive
+                trigger_ue5_spawn_interactive(item_description, semantic_target)
+                logger.info(f"  > Spawned Interactive Blueprint '{item_description}' at '{semantic_target}'")
+            except ImportError:
+                logger.error("  > trigger_ue5_spawn_interactive not found in ue5_interface.py")
             except Exception as e:
-                logger.error(f"Failed to process video attachment: {e}")
-                logger.info("  > Falling back to text-only generation...")
-                generation_result = self.world_client.generate_world(current_prompt, output_path)
+                logger.error(f"  > Failed to spawn interactive item: {e}")
                 
         else:
-            logger.info("  > Generating World via Text Prompt...")
-            generation_result = self.world_client.generate_world(current_prompt, output_path)
-        
-        if not generation_result:
-            logger.error("  > World Generation Failed.")
-            return {"status": "error", "reason": "World Generation Failed"}
+            # OPTION B: Standard World Labs Mesh Generation workflow
+            if video_attachment:
+                video_url = video_attachment["url"]
+                logger.info(f"  > Found Video Attachment: {video_url}")
+                
+                # Download the video locally first
+                temp_video_path = os.path.join(os.getcwd(), "content", "generated", f"temp_{issue_key}.mp4")
+                try:
+                    logger.info(f"  > Downloading Video from Linear...")
+                    v_resp = requests.get(video_url, stream=True, timeout=60)
+                    v_resp.raise_for_status()
+                    with open(temp_video_path, 'wb') as f:
+                        for chunk in v_resp.iter_content(chunk_size=8192):
+                            f.write(chunk)
+                    
+                    logger.info("  > Generating World via Video Prompt...")
+                    generation_result = self.world_client.generate_world_from_video(
+                        video_path=temp_video_path,
+                        text_prompt=current_prompt,
+                        output_path=output_path
+                    )
+                    
+                    # Cleanup the temp downloaded video
+                    if os.path.exists(temp_video_path):
+                        os.remove(temp_video_path)
+                        
+                except Exception as e:
+                    logger.error(f"Failed to process video attachment: {e}")
+                    logger.info("  > Falling back to text-only generation...")
+                    generation_result = self.world_client.generate_world(current_prompt, output_path)
+                    
+            else:
+                logger.info("  > Generating World via Text Prompt...")
+                generation_result = self.world_client.generate_world(current_prompt, output_path)
             
-        mesh_path = generation_result.get('mesh_path')
-        image_path = generation_result.get('image_path')
-        
-        # 2. Semantic Tagging & UE5 Injection
-        logger.info("  > Running Semantic Tagging...")
-        manifest = None
-        if image_path:
-            manifest = semantic_analyzer.analyze_world(image_path)
-        
-        if manifest:
-            manifest_path = output_path.replace(".gltf", "_manifest.json")
-            semantic_analyzer.save_manifest(manifest, manifest_path)
-            self._inject_tags_into_ue5(manifest)
-        
-        # 3. Trigger Physical Load in UE5
-        if mesh_path and os.path.exists(mesh_path):
-            logger.info("  > Commanding UE5 to load the generated world...")
-            try:
-                from ue5_interface import trigger_ue5_load_level
-                trigger_ue5_load_level(mesh_path)
-            except Exception as e:
-                logger.error(f"Failed to trigger UE5 load: {e}")
+            if not generation_result:
+                logger.error("  > World Generation Failed.")
+                return {"status": "error", "reason": "World Generation Failed"}
+                
+            mesh_path = generation_result.get('mesh_path')
+            image_path = generation_result.get('image_path')
+            
+            # 2. Semantic Tagging & UE5 Injection
+            logger.info("  > Running Semantic Tagging...")
+            
+            if image_path:
+                manifest = semantic_analyzer.analyze_world(image_path)
+            
+            if manifest:
+                manifest_path = output_path.replace(".gltf", "_manifest.json")
+                semantic_analyzer.save_manifest(manifest, manifest_path)
+                self._inject_tags_into_ue5(manifest)
+            
+            # 3. Trigger Physical Load in UE5
+            if mesh_path and os.path.exists(mesh_path):
+                logger.info("  > Commanding UE5 to load the generated world...")
+                try:
+                    from ue5_interface import trigger_ue5_load_level
+                    trigger_ue5_load_level(mesh_path)
+                except Exception as e:
+                    logger.error(f"Failed to trigger UE5 load: {e}")
+
         
         elapsed = time.time() - start_time
         return {

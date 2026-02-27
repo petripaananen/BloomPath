@@ -30,10 +30,11 @@ First, describe the overall scene composition, lighting, and spatial layout.
 
 ## Step 2: Object Identification
 For each distinct object, provide:
-1. semantic_type: What is it? (e.g., rock, wall, path, water, plant, furniture, fireplace)
+1. semantic_type: What is it? (e.g., rock, wall, path, water, plant, furniture, fireplace, desk, table, counter)
+   - CRITICAL: Explicitly identify flat surfaces that can support other objects (e.g., DeskTop, CounterTop, TableTop, Floor).
 2. estimated_position: Relative position in scene (front/back, left/right, near/far)
 3. estimated_scale: small/medium/large
-4. tags: Game-relevant tags (Walkable, Obstacle, Climbable, Interactable, Decorative, LightSource)
+4. tags: Game-relevant tags (Walkable, Obstacle, Climbable, Interactable, Decorative, LightSource, ObjectSpawner)
 5. physics:
    - friction: 0.0 (ice) to 1.0 (rough stone)
    - mass_category: light/medium/heavy/static
