@@ -1,6 +1,6 @@
-# 🌸 BloomPath: The Garden of Productivity
+# BloomPath: The Garden of Productivity
 
-# BloomPath Architecture
+# Architecture
 
 The Project World Model integration pipeline relies on several asynchronous systems. The orchestration server validates inbound requests against the current state of "The Garden" before commanding World Labs to generate assets or requesting Gemini for validation.
 
