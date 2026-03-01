@@ -1,12 +1,11 @@
 # 🌸 BloomPath: The Garden of Productivity
 
-BloomPath is a **Digital Twin of Organization (DTO) and Simulation** that visualizes project management data (Linear/Jira) as a dynamic, immersive 3D environment in Unreal Engine 5. It bridges the gap between abstract workflows and spatial awareness.
+# BloomPath Architecture
 
----
+The Project World Model integration pipeline relies on several asynchronous systems. The orchestration server validates inbound requests against the current state of "The Garden" before commanding World Labs to generate assets or requesting Gemini for validation.
 
 ## 🟢 Workflow & AI Roles
-![BloomPath Workflow & AI Roles](docs/BloomPath_Architecture_Latest.png)
-
+![BloomPath Technical Architecture & AI Roles](docs/BloomPath_Architecture_Latest.png)
 ---
 
 ## 1. Organic Data Visualization

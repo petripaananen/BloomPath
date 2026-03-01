@@ -1,0 +1,19 @@
+style:
+  scale: 4
+  theme: forest
+  background: transparent
+  fontFamily: "Inter, Roboto, sans-serif"
+  primaryColor: "#3B82F6"
+  secondaryColor: "#10B981"
+  errorColor: "#EF4444"
+  backgroundColor: "#0F172A"
+  nodeSpacing: 50
+  rankSpacing: 80
+agents:
+  critic: "gemini-3-flash"
+  visualizer: "mermaid-cli"
+  planner: "gemini-3-pro"
+templates:
+  architecture: "flowchart TB"
+  sequence: "sequenceDiagram"
+  class: "classDiagram"

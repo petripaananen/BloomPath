@@ -6,50 +6,7 @@ This document provides a high-level overview of the BloomPath system, illustrati
 
 BloomPath is composed of a Python middleware layer that orchestrates communication between external services (Jira, AI Models) and the visualization engine (Unreal Engine 5).
 
-```mermaid
-classDiagram
-    class Middleware {
-        +Flask App
-        +Webhook Handler
-        +Jira Integration
-        +sync_initial_state()
-        +process_webhook()
-    }
-
-    class BloomPathOrchestrator {
-        +PWM Loop Manager
-        +process_ticket()
-        +inject_tags()
-    }
-
-    class AI_Clients {
-        <<Interface>>
-    }
-
-    class WorldLabsClient {
-        +generate_world()
-    }
-
-    class SemanticAnalyzer {
-        +analyze_world()
-        +Gemini Vision
-    }
-
-    class UE5Interface {
-        +Remote Control API
-        +trigger_ue5_growth()
-        +trigger_ue5_weather()
-        +trigger_ue5_spawn_avatar()
-    }
-
-    Middleware --> BloomPathOrchestrator : Uses
-    Middleware --> UE5Interface : Direct Control (Growth/Weather)
-    BloomPathOrchestrator --> WorldLabsClient : 1. Synthesize
-    BloomPathOrchestrator --> SemanticAnalyzer : 2. Tag
-    BloomPathOrchestrator --> UE5Interface : 3. Inject
-    AI_Clients <|-- WorldLabsClient
-    AI_Clients <|-- SemanticAnalyzer
-```
+![BloomPath System Architecture](docs/BloomPath_Architecture_Latest.png)
 
 ---
 

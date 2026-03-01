@@ -211,6 +211,21 @@ if actor:
 """
     return {"output": AGENT.execute_python(script)}
 
+@retry_on_failure()
+def trigger_ue5_spawn_interactive(item_class_name: str, semantic_target: str) -> dict[str, Any]:
+    logger.info(f"✨ Spawning interactive {item_class_name} on {semantic_target}")
+    script = f"""
+import unreal
+world = unreal.EditorLevelLibrary.get_editor_world()
+actors = unreal.GameplayStatics.get_all_actors_with_tag(world, "{UE5_ACTOR_TAG}")
+actor = actors[0] if actors else unreal.find_object(None, "{UE5_ACTOR_PATH}")
+if actor:
+    # UE5 Blueprint should implement Spawn_Interactive_Item(ItemClass, SemanticTarget)
+    actor.call_method("Spawn_Interactive_Item", ("{item_class_name}", "{semantic_target}"))
+    print("Success")
+"""
+    return {"output": AGENT.execute_python(script)}
+
 # ── Avatar Animations (Social Layer) ────────────────────────────────
 
 AVATAR_ANIMATIONS = {
