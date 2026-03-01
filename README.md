@@ -15,53 +15,54 @@ flowchart TB
     classDef engine fill:#701A75,stroke:#F472B6,stroke-width:3px,color:#FDF2F8,rx:8,ry:8
     classDef queue fill:#451A03,stroke:#FBBF24,stroke-width:2px,color:#FFFBEB,rx:20,ry:20
 
-    subgraph Data ["🌐 Project Data Sources & Webhooks"]
-        direction LR
-        Linear["💠 Linear<br/>(GraphQL / Webhooks)"]:::source
-        Jira["🎫 Jira<br/>(REST API / Webhooks)"]:::source
+    subgraph Data ["🌐 Project Data Sources"]
+        Linear["💠 Linear (GraphQL/Webhooks)"]:::source
+        Jira["🎫 Jira (REST/Webhooks)"]:::source
     end
 
-    subgraph Middleware ["🛠️ BloomPath Middleware (Python Flask + Queue)"]
-        direction TB
-        Receiver["📥 Webhook Receiver<br/>(Signature Validation)"]:::middleware
-        Normalizer["🔧 Data Normalizer<br/>(UnifiedTicket Mapper)"]:::middleware
-        EventQ[/"🔄 Event Queue<br/>(Background Worker)"/]:::queue
-        Orch["⚙️ Core Orchestrator<br/>(State Management)"]:::core
+    subgraph Middleware ["🛠️ BloomPath Middleware (Python Flask)"]
+        Receiver["📥 Webhook Receiver"]:::middleware
+        Normalizer["🔧 Data Normalizer"]:::middleware
+        EventQ[/"🔄 Event Queue"/]:::queue
+        Orch["⚙️ Core Orchestrator"]:::core
         
-        Receiver -->|Raw JSON Payload| Normalizer
-        Normalizer -->|UnifiedTicket Instance| EventQ
-        EventQ -->|Dequeue Event| Orch
+        Receiver -->|"1. Raw JSON"| Normalizer
+        Normalizer -->|"2. Unified Ticket"| EventQ
+        EventQ -->|"3. Dequeue"| Orch
     end
 
     subgraph Intelligence ["🧠 AI Generation & Analysis Layer"]
-        direction LR
-        Marble["🕋 World Labs Marble<br/>(3D Asset GLB Generation)"]:::ai
-        Gemini["👁️ Gemini 3 Flash<br/>(Spatial Vision Validation)"]:::ai
+        direction TB
+        Marble["🕋 World Labs Marble (3D GLB Generation)"]:::ai
+        Gemini["👁️ Gemini 3 Flash (Vision Validation)"]:::ai
     end
 
-    subgraph Visualization ["🎮 Engine Presentation Layer"]
-        UE5["🌿 The Garden (Unreal Engine 5.7)<br/>(Remote Control API + Niagara)"]:::engine
+    subgraph Visualization ["🎮 Engine Presentation Layer&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"]
         Client["👤 Local Client Simulation"]:::source
+        UE5["🌿 The Garden (Unreal Engine 5.7)"]:::engine
+        Client ~~~ UE5
     end
 
     %% Data Ingestion Flow
-    Linear -- "HTTP POST (Webhook Event)" --> Receiver
-    Jira -- "HTTP POST (Webhook Event)" --> Receiver
+    Linear --->|"HTTP POST (Webhook Event)"| Receiver
+    Jira --->|"HTTP POST (Webhook Event)"| Receiver
 
     %% AI Loop
-    Orch -- "1. Context Prompt (Feature Request)" --> Marble
-    Marble -- "2. Synchronous .GLB Asset" --> Orch
-    Orch -- "3. Quality Validation Request" --> Gemini
-    Gemini -- "4. Semantic Layout & Navigation JSON" --> Orch
+    Orch --->|"1. Context Prompt (Feature Request)"| Marble
+    Marble --->|"2. Synchronous .GLB Asset"| Orch
+    Orch --->|"3. Quality Validation Request"| Gemini
+    Gemini --->|"4. Semantic Layout & Navigation JSON"| Orch
 
     %% Render Loop
-    Orch == "5. Remote API Commands<br/>(Spawn, Scale, Adjust Weather)" ==> UE5
+    Orch ===>|"5. Remote API Commands (Spawn, Scale, Adjust Weather)"| UE5
     
     %% Feedback Loop
-    Client -. "6. Action (e.g., Watering Plant)" .-> UE5
-    UE5 -. "7. Object Interaction Sync" .-> Receiver
-    Orch -. "8. API Mutate (Resolve Incident)" .-> Linear
-    Orch -. "8. API Mutate (Resolve Ticket)" .-> Jira
+    Client -.->|"6. Action (e.g., Watering Plant)"| UE5
+    UE5 -.->|"7. Object Interaction Sync"| Receiver
+    
+    %% Return API
+    Orch -.->|"8. API Mutate (Resolve Incident)"| Linear
+    Orch -.->|"8. API Mutate (Resolve Ticket)"| Jira
 ```
 
 ---
