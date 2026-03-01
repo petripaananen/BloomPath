@@ -35,6 +35,7 @@ flowchart TB
         direction TB
         Marble["🕋 World Labs Marble (3D GLB Generation)"]:::ai
         Gemini["👁️ Gemini 3 Flash (Vision Validation)"]:::ai
+        DiagAgent["📊 DiagramAgent (Multi-Agent Architect)"]:::ai
     end
 
     subgraph Visualization ["🎮 Engine Presentation Layer&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"]
@@ -52,17 +53,19 @@ flowchart TB
     Marble --->|"2. Synchronous .GLB Asset"| Orch
     Orch --->|"3. Quality Validation Request"| Gemini
     Gemini --->|"4. Semantic Layout & Navigation JSON"| Orch
+    Orch --->|"5. Architecture State"| DiagAgent
 
     %% Render Loop
-    Orch ===>|"5. Remote API Commands (Spawn, Scale, Adjust Weather)"| UE5
+    Orch ===>|"6. Remote API Commands (Spawn, Scale, Adjust Weather)"| UE5
+    DiagAgent ===>|"6. Render & Refine Architecture Diagram"| Client
     
     %% Feedback Loop
-    Client -.->|"6. Action (e.g., Watering Plant)"| UE5
-    UE5 -.->|"7. Object Interaction Sync"| Receiver
+    Client -.->|"7. Action (e.g., Watering Plant)"| UE5
+    UE5 -.->|"8. Object Interaction Sync"| Receiver
     
     %% Return API
-    Orch -.->|"8. API Mutate (Resolve Incident)"| Linear
-    Orch -.->|"8. API Mutate (Resolve Ticket)"| Jira
+    Orch -.->|"9. API Mutate (Resolve Incident)"| Linear
+    Orch -.->|"9. API Mutate (Resolve Ticket)"| Jira
 ```
 
 ---
