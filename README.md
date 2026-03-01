@@ -6,49 +6,62 @@ BloomPath is a **Digital Twin of Organization (DTO) and Simulation** that visual
 
 ## 🟢 Workflow & AI Roles
 ```mermaid
-flowchart TD
-    %% Define Styles
-    classDef source fill:#e1f5fe,stroke:#01579b,stroke-width:2px,color:#01579b
-    classDef middleware fill:#fff3e0,stroke:#e65100,stroke-width:3px,color:#e65100
-    classDef ai fill:#f3e5f5,stroke:#4a148c,stroke-width:2px,color:#4a148c
-    classDef viz fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px,color:#1b5e20
+flowchart TB
+    %% Modern Technical Styling
+    classDef source fill:#0F172A,stroke:#38BDF8,stroke-width:2px,color:#F0F9FF,rx:8,ry:8
+    classDef middleware fill:#1E293B,stroke:#8B5CF6,stroke-width:2px,color:#F5F3FF,rx:10,ry:10
+    classDef core fill:#3B0764,stroke:#D8B4FE,stroke-width:3px,color:#FAF5FF,rx:12,ry:12
+    classDef ai fill:#064E3B,stroke:#34D399,stroke-width:2px,color:#ECFDF5,rx:8,ry:8
+    classDef engine fill:#701A75,stroke:#F472B6,stroke-width:3px,color:#FDF2F8,rx:8,ry:8
+    classDef queue fill:#451A03,stroke:#FBBF24,stroke-width:2px,color:#FFFBEB,rx:20,ry:20
 
-    subgraph DataSources [Project Data Sources]
+    subgraph Data ["🌐 Project Data Sources & Webhooks"]
+        direction LR
+        Linear["💠 Linear<br/>(GraphQL / Webhooks)"]:::source
+        Jira["🎫 Jira<br/>(REST API / Webhooks)"]:::source
+    end
+
+    subgraph Middleware ["🛠️ BloomPath Middleware (Python Flask + Queue)"]
         direction TB
-        ProjectData["Linear / Jira"]:::source
+        Receiver["📥 Webhook Receiver<br/>(Signature Validation)"]:::middleware
+        Normalizer["🔧 Data Normalizer<br/>(UnifiedTicket Mapper)"]:::middleware
+        EventQ[/"🔄 Event Queue<br/>(Background Worker)"/]:::queue
+        Orch["⚙️ Core Orchestrator<br/>(State Management)"]:::core
+        
+        Receiver -->|Raw JSON Payload| Normalizer
+        Normalizer -->|UnifiedTicket Instance| EventQ
+        EventQ -->|Dequeue Event| Orch
     end
 
-    subgraph Middleware [BloomPath Middleware]
-        Orch["Orchestrator<br/>(Python Core)"]:::middleware
+    subgraph Intelligence ["🧠 AI Generation & Analysis Layer"]
+        direction LR
+        Marble["🕋 World Labs Marble<br/>(3D Asset GLB Generation)"]:::ai
+        Gemini["👁️ Gemini 3 Flash<br/>(Spatial Vision Validation)"]:::ai
     end
 
-    subgraph AI [AI Generation and Analysis]
-        direction TB
-        Marble["World Labs Marble<br/>(3D Gen)"]:::ai
-        Gemini["Gemini 3 Flash<br/>(Vision Analysis)"]:::ai
-        %% Force Vertical Stack
-        Marble ~~~ Gemini
+    subgraph Visualization ["🎮 Engine Presentation Layer"]
+        UE5["🌿 The Garden (Unreal Engine 5.7)<br/>(Remote Control API + Niagara)"]:::engine
+        Client["👤 Local Client Simulation"]:::source
     end
 
-    subgraph Viz [The Garden - UE5]
-        UE5["Unreal Engine 5.7<br/>(Visualization)"]:::viz
-    end
+    %% Data Ingestion Flow
+    Linear -- "HTTP POST (Webhook Event)" --> Receiver
+    Jira -- "HTTP POST (Webhook Event)" --> Receiver
 
-    %% Data Ingestion
-    ProjectData -->|Webhooks| Orch
+    %% AI Loop
+    Orch -- "1. Context Prompt (Feature Request)" --> Marble
+    Marble -- "2. Synchronous .GLB Asset" --> Orch
+    Orch -- "3. Quality Validation Request" --> Gemini
+    Gemini -- "4. Semantic Layout & Navigation JSON" --> Orch
 
-    %% Orchestrator Loop
-    Orch -->|1. Prompt| Marble
-    Marble -->|2. 3D Asset GLB| Orch
-    Orch -->|3. Visual Analysis| Gemini
-    Gemini -->|4. Semantic Manifest| Orch
-
-    %% Visualization
-    Orch ==>|5. Spawn and Tag| UE5
+    %% Render Loop
+    Orch == "5. Remote API Commands<br/>(Spawn, Scale, Adjust Weather)" ==> UE5
     
-    %% Bidirectional Feedback Loop
-    UE5 -.->|User Interaction - Watering| Orch
-    Orch -.->|Update Status - Done| ProjectData
+    %% Feedback Loop
+    Client -. "6. Action (e.g., Watering Plant)" .-> UE5
+    UE5 -. "7. Object Interaction Sync" .-> Receiver
+    Orch -. "8. API Mutate (Resolve Incident)" .-> Linear
+    Orch -. "8. API Mutate (Resolve Ticket)" .-> Jira
 ```
 
 ---
