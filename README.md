@@ -5,68 +5,7 @@
 The Project World Model integration pipeline relies on several asynchronous systems. The orchestration server validates inbound requests against the current state of "The Garden" before commanding World Labs to generate assets or requesting Gemini for validation.
 
 ## Workflow Visualizationles
-```mermaid
-flowchart TB
-    %% Modern Technical Styling
-    classDef source fill:#0F172A,stroke:#38BDF8,stroke-width:2px,color:#F0F9FF,rx:8,ry:8
-    classDef middleware fill:#1E293B,stroke:#8B5CF6,stroke-width:2px,color:#F5F3FF,rx:10,ry:10
-    classDef core fill:#3B0764,stroke:#D8B4FE,stroke-width:3px,color:#FAF5FF,rx:12,ry:12
-    classDef ai fill:#064E3B,stroke:#34D399,stroke-width:2px,color:#ECFDF5,rx:8,ry:8
-    classDef engine fill:#701A75,stroke:#F472B6,stroke-width:3px,color:#FDF2F8,rx:8,ry:8
-    classDef queue fill:#451A03,stroke:#FBBF24,stroke-width:2px,color:#FFFBEB,rx:20,ry:20
-
-    subgraph Data ["🌐 Project Data Sources"]
-        Linear["💠 Linear (GraphQL/Webhooks)"]:::source
-        Jira["🎫 Jira (REST/Webhooks)"]:::source
-    end
-
-    subgraph Middleware ["🛠️ BloomPath Middleware (Python Flask)"]
-        Receiver["📥 Webhook Receiver"]:::middleware
-        Normalizer["🔧 Data Normalizer"]:::middleware
-        EventQ[/"🔄 Event Queue"/]:::queue
-        Orch["⚙️ Core Orchestrator"]:::core
-        
-        Receiver -->|"1. Raw JSON"| Normalizer
-        Normalizer -->|"2. Unified Ticket"| EventQ
-        EventQ -->|"3. Dequeue"| Orch
-    end
-
-    subgraph Intelligence ["🧠 AI Generation & Analysis Layer"]
-        direction TB
-        Marble["🕋 World Labs Marble (3D GLB Generation)"]:::ai
-        Gemini["👁️ Gemini 3 Flash (Vision Validation)"]:::ai
-        DiagAgent["📊 DiagramAgent (Multi-Agent Architect)"]:::ai
-    end
-
-    subgraph Visualization ["🎮 Engine Presentation Layer&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"]
-        Client["👤 Local Client Simulation"]:::source
-        UE5["🌿 The Garden (Unreal Engine 5.7)"]:::engine
-        Client ~~~ UE5
-    end
-
-    %% Data Ingestion Flow
-    Linear --->|"HTTP POST (Webhook Event)"| Receiver
-    Jira --->|"HTTP POST (Webhook Event)"| Receiver
-
-    %% AI Loop
-    Orch --->|"1. Context Prompt (Feature Request)"| Marble
-    Marble --->|"2. Synchronous .GLB Asset"| Orch
-    Orch --->|"3. Quality Validation Request"| Gemini
-    Gemini --->|"4. Semantic Layout & Navigation JSON"| Orch
-    Orch --->|"5. Architecture State"| DiagAgent
-
-    %% Render Loop
-    Orch ===>|"6. Remote API Commands (Spawn, Scale, Adjust Weather)"| UE5
-    DiagAgent ===>|"6. Render & Refine Architecture Diagram"| Client
-    
-    %% Feedback Loop
-    Client -.->|"7. Action (e.g., Watering Plant)"| UE5
-    UE5 -.->|"8. Object Interaction Sync"| Receiver
-    
-    %% Return API
-    Orch -.->|"9. API Mutate (Resolve Incident)"| Linear
-    Orch -.->|"9. API Mutate (Resolve Ticket)"| Jira
-```
+![BloomPath Technical Architecture & AI Roles](docs/BloomPath_Architecture_Latest.png)
 
 ---
 
