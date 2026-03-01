@@ -5,51 +5,7 @@ BloomPath is a **Digital Twin of Organization (DTO) and Simulation** that visual
 ---
 
 ## 🟢 Workflow & AI Roles
-```mermaid
-flowchart TD
-    %% Define Styles
-    classDef source fill:#e1f5fe,stroke:#01579b,stroke-width:2px,color:#01579b
-    classDef middleware fill:#fff3e0,stroke:#e65100,stroke-width:3px,color:#e65100
-    classDef ai fill:#f3e5f5,stroke:#4a148c,stroke-width:2px,color:#4a148c
-    classDef viz fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px,color:#1b5e20
-
-    subgraph DataSources [Project Data Sources]
-        direction TB
-        ProjectData["Linear / Jira"]:::source
-    end
-
-    subgraph Middleware [BloomPath Middleware]
-        Orch["Orchestrator<br/>(Python Core)"]:::middleware
-    end
-
-    subgraph AI [AI Generation and Analysis]
-        direction TB
-        Marble["World Labs Marble<br/>(3D Gen)"]:::ai
-        Gemini["Gemini 3 Flash<br/>(Vision Analysis)"]:::ai
-        %% Force Vertical Stack
-        Marble ~~~ Gemini
-    end
-
-    subgraph Viz [The Garden - UE5]
-        UE5["Unreal Engine 5.7<br/>(Visualization)"]:::viz
-    end
-
-    %% Data Ingestion
-    ProjectData -->|Webhooks| Orch
-
-    %% Orchestrator Loop
-    Orch -->|1. Prompt| Marble
-    Marble -->|2. 3D Asset GLB| Orch
-    Orch -->|3. Visual Analysis| Gemini
-    Gemini -->|4. Semantic Manifest| Orch
-
-    %% Visualization
-    Orch ==>|5. Spawn and Tag| UE5
-    
-    %% Bidirectional Feedback Loop
-    UE5 -.->|User Interaction - Watering| Orch
-    Orch -.->|Update Status - Done| ProjectData
-```
+![BloomPath Workflow & AI Roles](docs/BloomPath_Architecture_Latest.png)
 
 ---
 
