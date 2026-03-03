@@ -44,7 +44,7 @@ A truly interactive DTO, not just a dashboard:
 
 ---
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### 1. Setup & Installation
 **Prerequisites**:
@@ -110,7 +110,7 @@ Exposes your local server to the internet so Linear/Jira can reach it.
 
 ---
 
-### 🛠️ Technical Stack
+###  Technical Stack
 - **Engine**: Unreal Engine 5.7.2 (Remote Control API, Niagara, glTFRuntime)
 - **Intelligence**: Google Gemini 3 Flash (Vision Analysis), World Labs API (Marble AI)
 - **Infrastructure**: Python Middleware, Linear/Jira Cloud API.
