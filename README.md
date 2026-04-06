@@ -2,7 +2,7 @@
 
 # Architecture
 
-The Project World Model integration pipeline relies on several asynchronous systems. The orchestration server validates inbound requests against the current state of "The Garden" before commanding World Labs to generate assets or requesting Gemini for validation.
+This PoC model integration pipeline relies on several asynchronous systems. The orchestration server validates inbound requests against the current state of "The Garden" before commanding World Labs to generate assets or requesting Gemini for validation.
 
 ##  Workflow & AI Roles
 ![BloomPath Technical Architecture & AI Roles](docs/BloomPath_Architecture_Latest.png)
